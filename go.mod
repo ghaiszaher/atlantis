@@ -76,7 +76,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.1 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/hcl/v2 v2.6.0 // indirect
+	github.com/hashicorp/hcl/v2 v2.6.0
 	github.com/huandu/xstrings v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
@@ -129,7 +129,7 @@ require (
 require (
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20200623234511-94959e3146b2
 	github.com/twmb/murmur3 v1.1.6 // indirect
-	github.com/uber-go/tally v3.4.3+incompatible
+	github.com/uber-go/tally v3.5.0+incompatible
 )
 
 require (
