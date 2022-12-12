@@ -13,6 +13,8 @@ type UserConfig struct {
 	AtlantisURL                     string `mapstructure:"atlantis-url"`
 	Automerge                       bool   `mapstructure:"automerge"`
 	AutoplanFileList                string `mapstructure:"autoplan-file-list"`
+	AutoplanModules                 bool   `mapstructure:"autoplan-modules"`
+	AutoplanModulesFromProjects     string `mapstructure:"autoplan-modules-from-projects"`
 	AzureDevopsToken                string `mapstructure:"azuredevops-token"`
 	AzureDevopsUser                 string `mapstructure:"azuredevops-user"`
 	AzureDevopsWebhookPassword      string `mapstructure:"azuredevops-webhook-password"`
@@ -94,6 +96,7 @@ type UserConfig struct {
 	SlackToken             string          `mapstructure:"slack-token"`
 	SSLCertFile            string          `mapstructure:"ssl-cert-file"`
 	SSLKeyFile             string          `mapstructure:"ssl-key-file"`
+	RestrictFileList       bool            `mapstructure:"restrict-file-list"`
 	TFDownloadURL          string          `mapstructure:"tf-download-url"`
 	TFEHostname            string          `mapstructure:"tfe-hostname"`
 	TFELocalExecutionMode  bool            `mapstructure:"tfe-local-execution-mode"`

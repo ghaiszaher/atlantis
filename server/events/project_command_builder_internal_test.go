@@ -7,6 +7,7 @@ import (
 
 	version "github.com/hashicorp/go-version"
 	. "github.com/petergtz/pegomock"
+
 	"github.com/runatlantis/atlantis/server/core/config"
 	"github.com/runatlantis/atlantis/server/core/config/valid"
 	"github.com/runatlantis/atlantis/server/events/command"
@@ -82,6 +83,7 @@ workflows:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{"init", "plan"},
 			expApplySteps: []string{"apply"},
@@ -137,6 +139,7 @@ projects:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{"init", "plan"},
 			expApplySteps: []string{"apply"},
@@ -192,6 +195,7 @@ projects:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{"init", "plan"},
 			expApplySteps: []string{"apply"},
@@ -255,6 +259,7 @@ projects:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{"plan"},
 			expApplySteps: []string{},
@@ -405,6 +410,7 @@ workflows:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{"plan"},
 			expApplySteps: []string{"apply"},
@@ -464,6 +470,7 @@ projects:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{"plan"},
 			expApplySteps: []string{"apply"},
@@ -526,6 +533,7 @@ workflows:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{},
 			expApplySteps: []string{},
@@ -571,6 +579,7 @@ projects:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{"plan"},
 			expApplySteps: []string{"apply"},
@@ -624,7 +633,9 @@ projects:
 				&CommentParser{},
 				false,
 				false,
+				"",
 				"**/*.tf,**/*.tfvars,**/*.tfvars.json,**/terragrunt.hcl,**/.terraform.lock.hcl",
+				false,
 				statsScope,
 				logger,
 			)
@@ -775,6 +786,7 @@ projects:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPlanSteps:  []string{"init", "plan"},
 			expApplySteps: []string{"apply"},
@@ -825,7 +837,9 @@ projects:
 				&CommentParser{},
 				false,
 				true,
+				"",
 				"**/*.tf,**/*.tfvars,**/*.tfvars.json,**/terragrunt.hcl,**/.terraform.lock.hcl",
+				false,
 				statsScope,
 				logger,
 			)
@@ -940,6 +954,7 @@ repos:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPolicyCheckSteps: []string{"show", "policy_check"},
 		},
@@ -1000,6 +1015,7 @@ workflows:
 				Verbose:           true,
 				Workspace:         "myworkspace",
 				PolicySets:        emptyPolicySets,
+				RepoLocking:       true,
 			},
 			expPolicyCheckSteps: []string{"policy_check"},
 		},
@@ -1054,7 +1070,9 @@ workflows:
 				&CommentParser{},
 				false,
 				false,
+				"",
 				"**/*.tf,**/*.tfvars,**/*.tfvars.json,**/terragrunt.hcl,**/.terraform.lock.hcl",
+				false,
 				statsScope,
 				logger,
 			)
