@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-getter"
 	"github.com/hashicorp/go-version"
 	. "github.com/petergtz/pegomock"
+
 	"github.com/runatlantis/atlantis/server"
 	events_controllers "github.com/runatlantis/atlantis/server/controllers/events"
 	"github.com/runatlantis/atlantis/server/core/config"
@@ -898,10 +899,12 @@ func setupE2E(t *testing.T, repoDir string) (events_controllers.VCSEventsControl
 	Ok(t, err)
 	backend := boltdb
 	lockingClient := locking.NewClient(boltdb)
+	noOpLocker := locking.NewNoOpLocker()
 	applyLocker = locking.NewApplyClient(boltdb, userConfig.DisableApply)
 	projectLocker := &events.DefaultProjectLocker{
-		Locker:    lockingClient,
-		VCSClient: e2eVCSClient,
+		Locker:     lockingClient,
+		NoOpLocker: noOpLocker,
+		VCSClient:  e2eVCSClient,
 	}
 	workingDir := &events.FileWorkspace{
 		DataDir:                     dataDir,
@@ -972,7 +975,9 @@ func setupE2E(t *testing.T, repoDir string) (events_controllers.VCSEventsControl
 		commentParser,
 		false,
 		false,
+		"",
 		"**/*.tf,**/*.tfvars,**/*.tfvars.json,**/terragrunt.hcl,**/.terraform.lock.hcl",
+		false,
 		statsScope,
 		logger,
 	)
