@@ -21,13 +21,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-github/v31/github"
+	"github.com/google/go-github/v49/github"
 	"github.com/mcdafydd/go-azuredevops/azuredevops"
 	"github.com/mohae/deepcopy"
 	"github.com/runatlantis/atlantis/server/events"
 	"github.com/runatlantis/atlantis/server/events/command"
 	"github.com/runatlantis/atlantis/server/events/models"
-	. "github.com/runatlantis/atlantis/server/events/vcs/fixtures"
+	. "github.com/runatlantis/atlantis/server/events/vcs/testdata"
 	. "github.com/runatlantis/atlantis/testing"
 	gitlab "github.com/xanzy/go-gitlab"
 )
@@ -729,14 +729,14 @@ func TestNewCommand_CleansDir(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.RepoRelDir, func(t *testing.T) {
-			cmd := events.NewCommentCommand(c.RepoRelDir, nil, command.Plan, false, false, "workspace", "")
+			cmd := events.NewCommentCommand(c.RepoRelDir, nil, command.Plan, "", false, false, "workspace", "")
 			Equals(t, c.ExpDir, cmd.RepoRelDir)
 		})
 	}
 }
 
 func TestNewCommand_EmptyDirWorkspaceProject(t *testing.T) {
-	cmd := events.NewCommentCommand("", nil, command.Plan, false, false, "", "")
+	cmd := events.NewCommentCommand("", nil, command.Plan, "", false, false, "", "")
 	Equals(t, events.CommentCommand{
 		RepoRelDir:  "",
 		Flags:       nil,
@@ -748,7 +748,7 @@ func TestNewCommand_EmptyDirWorkspaceProject(t *testing.T) {
 }
 
 func TestNewCommand_AllFieldsSet(t *testing.T) {
-	cmd := events.NewCommentCommand("dir", []string{"a", "b"}, command.Plan, true, false, "workspace", "project")
+	cmd := events.NewCommentCommand("dir", []string{"a", "b"}, command.Plan, "", true, false, "workspace", "project")
 	Equals(t, events.CommentCommand{
 		Workspace:   "workspace",
 		RepoRelDir:  "dir",
@@ -1235,6 +1235,39 @@ func TestParseAzureDevopsRepo(t *testing.T) {
 		},
 	}, r)
 
+	// this should be successful
+	repo = ADRepo
+	repo.WebURL = azuredevops.String("https://owner.visualstudio.com/project/_git/repo")
+	r, err = parser.ParseAzureDevopsRepo(&repo)
+	Ok(t, err)
+	Equals(t, models.Repo{
+		Owner:             "owner/project",
+		FullName:          "owner/project/repo",
+		CloneURL:          "https://azuredevops-user:azuredevops-token@owner.visualstudio.com/project/_git/repo",
+		SanitizedCloneURL: "https://azuredevops-user:<redacted>@owner.visualstudio.com/project/_git/repo",
+		Name:              "repo",
+		VCSHost: models.VCSHost{
+			Hostname: "owner.visualstudio.com",
+			Type:     models.AzureDevops,
+		},
+	}, r)
+
+	// this should be successful
+	repo = ADRepo
+	repo.WebURL = azuredevops.String("https://dev.azure.com/owner/project/_git/repo")
+	r, err = parser.ParseAzureDevopsRepo(&repo)
+	Ok(t, err)
+	Equals(t, models.Repo{
+		Owner:             "owner/project",
+		FullName:          "owner/project/repo",
+		CloneURL:          "https://azuredevops-user:azuredevops-token@dev.azure.com/owner/project/_git/repo",
+		SanitizedCloneURL: "https://azuredevops-user:<redacted>@dev.azure.com/owner/project/_git/repo",
+		Name:              "repo",
+		VCSHost: models.VCSHost{
+			Hostname: "dev.azure.com",
+			Type:     models.AzureDevops,
+		},
+	}, r)
 }
 
 func TestParseAzureDevopsPullEvent(t *testing.T) {

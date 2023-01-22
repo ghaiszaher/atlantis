@@ -1,6 +1,9 @@
 package server
 
 import (
+	"strings"
+
+	"github.com/runatlantis/atlantis/server/events/command"
 	"github.com/runatlantis/atlantis/server/logging"
 )
 
@@ -10,6 +13,7 @@ import (
 type UserConfig struct {
 	AllowForkPRs                    bool   `mapstructure:"allow-fork-prs"`
 	AllowRepoConfig                 bool   `mapstructure:"allow-repo-config"`
+	AllowCommands                   string `mapstructure:"allow-commands"`
 	AtlantisURL                     string `mapstructure:"atlantis-url"`
 	Automerge                       bool   `mapstructure:"automerge"`
 	AutoplanFileList                string `mapstructure:"autoplan-file-list"`
@@ -31,9 +35,11 @@ type UserConfig struct {
 	DisableAutoplan                 bool   `mapstructure:"disable-autoplan"`
 	DisableMarkdownFolding          bool   `mapstructure:"disable-markdown-folding"`
 	DisableRepoLocking              bool   `mapstructure:"disable-repo-locking"`
+	DiscardApprovalOnPlanFlag       bool   `mapstructure:"discard-approval-on-plan"`
 	EnablePolicyChecksFlag          bool   `mapstructure:"enable-policy-checks"`
 	EnableRegExpCmd                 bool   `mapstructure:"enable-regexp-cmd"`
 	EnableDiffMarkdownFormat        bool   `mapstructure:"enable-diff-markdown-format"`
+	ExecutableName                  string `mapstructure:"executable-name"`
 	GithubAllowMergeableBypassApply bool   `mapstructure:"gh-allow-mergeable-bypass-apply"`
 	GithubHostname                  string `mapstructure:"gh-hostname"`
 	GithubToken                     string `mapstructure:"gh-token"`
@@ -97,6 +103,7 @@ type UserConfig struct {
 	SSLCertFile            string          `mapstructure:"ssl-cert-file"`
 	SSLKeyFile             string          `mapstructure:"ssl-key-file"`
 	RestrictFileList       bool            `mapstructure:"restrict-file-list"`
+	TFDownload             bool            `mapstructure:"tf-download"`
 	TFDownloadURL          string          `mapstructure:"tf-download-url"`
 	TFEHostname            string          `mapstructure:"tfe-hostname"`
 	TFELocalExecutionMode  bool            `mapstructure:"tfe-local-execution-mode"`
@@ -110,6 +117,30 @@ type UserConfig struct {
 	WebPassword            string          `mapstructure:"web-password"`
 	WriteGitCreds          bool            `mapstructure:"write-git-creds"`
 	WebsocketCheckOrigin   bool            `mapstructure:"websocket-check-origin"`
+}
+
+// ToAllowCommandNames parse AllowCommands into a slice of CommandName
+func (u UserConfig) ToAllowCommandNames() ([]command.Name, error) {
+	var allowCommands []command.Name
+	var hasAll bool
+	for _, input := range strings.Split(u.AllowCommands, ",") {
+		if input == "" {
+			continue
+		}
+		if input == "all" {
+			hasAll = true
+			continue
+		}
+		cmd, err := command.ParseCommandName(input)
+		if err != nil {
+			return nil, err
+		}
+		allowCommands = append(allowCommands, cmd)
+	}
+	if hasAll {
+		return command.AllCommentCommands, nil
+	}
+	return allowCommands, nil
 }
 
 // ToLogLevel returns the LogLevel object corresponding to the user-passed

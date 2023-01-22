@@ -148,6 +148,8 @@ func TestWorkflow_ToValid(t *testing.T) {
 				Apply:       valid.DefaultApplyStage,
 				Plan:        valid.DefaultPlanStage,
 				PolicyCheck: valid.DefaultPolicyCheckStage,
+				Import:      valid.DefaultImportStage,
+				StateRm:     valid.DefaultStateRmStage,
 			},
 		},
 		{
@@ -174,6 +176,20 @@ func TestWorkflow_ToValid(t *testing.T) {
 						},
 					},
 				},
+				Import: &raw.Stage{
+					Steps: []raw.Step{
+						{
+							Key: String("import"),
+						},
+					},
+				},
+				StateRm: &raw.Stage{
+					Steps: []raw.Step{
+						{
+							Key: String("state_rm"),
+						},
+					},
+				},
 			},
 			exp: valid.Workflow{
 				Apply: valid.Stage{
@@ -194,6 +210,20 @@ func TestWorkflow_ToValid(t *testing.T) {
 					Steps: []valid.Step{
 						{
 							StepName: "init",
+						},
+					},
+				},
+				Import: valid.Stage{
+					Steps: []valid.Step{
+						{
+							StepName: "import",
+						},
+					},
+				},
+				StateRm: valid.Stage{
+					Steps: []valid.Step{
+						{
+							StepName: "state_rm",
 						},
 					},
 				},

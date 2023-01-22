@@ -35,6 +35,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/uber-go/tally"
 	"github.com/uber-go/tally/prometheus"
+	"github.com/urfave/negroni/v3"
 
 	cfg "github.com/runatlantis/atlantis/server/core/config"
 	"github.com/runatlantis/atlantis/server/core/config/valid"
@@ -47,9 +48,6 @@ import (
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
-	"github.com/urfave/negroni"
-
 	"github.com/runatlantis/atlantis/server/controllers"
 	events_controllers "github.com/runatlantis/atlantis/server/controllers/events"
 	"github.com/runatlantis/atlantis/server/controllers/templates"
@@ -175,6 +173,18 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	if userConfig.EnablePolicyChecksFlag {
 		logger.Info("Policy Checks are enabled")
 		policyChecksEnabled = true
+	}
+
+	allowCommands, err := userConfig.ToAllowCommandNames()
+	if err != nil {
+		return nil, err
+	}
+	disableApply := true
+	for _, allowCommand := range allowCommands {
+		if allowCommand == command.Apply {
+			disableApply = false
+			break
+		}
 	}
 
 	validator := &cfg.ParserValidator{}
@@ -393,6 +403,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		config.DefaultTFVersionFlag,
 		userConfig.TFDownloadURL,
 		&terraform.DefaultDownloader{},
+		userConfig.TFDownload,
 		true,
 		projectCmdOutputHandler)
 	// The flag.Lookup call is to detect if we're running in a unit test. If we
@@ -401,14 +412,15 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	if err != nil && flag.Lookup("test.v") == nil {
 		return nil, errors.Wrap(err, "initializing terraform")
 	}
-	markdownRenderer := events.GetMarkdownRenderer(
+	markdownRenderer := events.NewMarkdownRenderer(
 		gitlabClient.SupportsCommonMark(),
 		userConfig.DisableApplyAll,
+		disableApply,
 		userConfig.DisableMarkdownFolding,
-		userConfig.DisableApply,
 		userConfig.DisableRepoLocking,
 		userConfig.EnableDiffMarkdownFormat,
 		userConfig.MarkdownTemplateOverridesDir,
+		userConfig.ExecutableName,
 	)
 
 	var lockingClient locking.Locker
@@ -438,7 +450,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		lockingClient = locking.NewClient(backend)
 	}
 
-	applyLockingClient = locking.NewApplyClient(backend, userConfig.DisableApply)
+	applyLockingClient = locking.NewApplyClient(backend, disableApply)
 	workingDirLocker := events.NewDefaultWorkingDirLocker()
 
 	var workingDir events.WorkingDir = &events.FileWorkspace{
@@ -496,13 +508,14 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		AzureDevopsUser:    userConfig.AzureDevopsUser,
 		AzureDevopsToken:   userConfig.AzureDevopsToken,
 	}
-	commentParser := &events.CommentParser{
-		GithubUser:      userConfig.GithubUser,
-		GitlabUser:      userConfig.GitlabUser,
-		BitbucketUser:   userConfig.BitbucketUser,
-		AzureDevopsUser: userConfig.AzureDevopsUser,
-		ApplyDisabled:   userConfig.DisableApply,
-	}
+	commentParser := events.NewCommentParser(
+		userConfig.GithubUser,
+		userConfig.GitlabUser,
+		userConfig.BitbucketUser,
+		userConfig.AzureDevopsUser,
+		userConfig.ExecutableName,
+		allowCommands,
+	)
 	defaultTfVersion := terraformClient.DefaultVersion()
 	pendingPlanFinder := &events.DefaultPendingPlanFinder{}
 	runStepRunner := &runtime.RunStepRunner{
@@ -518,18 +531,26 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		AtlantisVersion: config.AtlantisVersion,
 	}
 	preWorkflowHooksCommandRunner := &events.DefaultPreWorkflowHooksCommandRunner{
-		VCSClient:             vcsClient,
-		GlobalCfg:             globalCfg,
-		WorkingDirLocker:      workingDirLocker,
-		WorkingDir:            workingDir,
-		PreWorkflowHookRunner: runtime.DefaultPreWorkflowHookRunner{},
+		VCSClient:        vcsClient,
+		GlobalCfg:        globalCfg,
+		WorkingDirLocker: workingDirLocker,
+		WorkingDir:       workingDir,
+		PreWorkflowHookRunner: runtime.DefaultPreWorkflowHookRunner{
+			OutputHandler: projectCmdOutputHandler,
+		},
+		CommitStatusUpdater: commitStatusUpdater,
+		Router:              router,
 	}
 	postWorkflowHooksCommandRunner := &events.DefaultPostWorkflowHooksCommandRunner{
-		VCSClient:              vcsClient,
-		GlobalCfg:              globalCfg,
-		WorkingDirLocker:       workingDirLocker,
-		WorkingDir:             workingDir,
-		PostWorkflowHookRunner: runtime.DefaultPostWorkflowHookRunner{},
+		VCSClient:        vcsClient,
+		GlobalCfg:        globalCfg,
+		WorkingDirLocker: workingDirLocker,
+		WorkingDir:       workingDir,
+		PostWorkflowHookRunner: runtime.DefaultPostWorkflowHookRunner{
+			OutputHandler: projectCmdOutputHandler,
+		},
+		CommitStatusUpdater: commitStatusUpdater,
+		Router:              router,
 	}
 	projectCommandBuilder := events.NewInstrumentedProjectCommandBuilder(
 		policyChecksEnabled,
@@ -548,6 +569,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		userConfig.RestrictFileList,
 		statsScope,
 		logger,
+		terraformClient,
 	)
 
 	showStepRunner, err := runtime.NewShowStepRunner(terraformClient, defaultTfVersion)
@@ -556,16 +578,16 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		return nil, errors.Wrap(err, "initializing show step runner")
 	}
 
-	policyCheckRunner, err := runtime.NewPolicyCheckStepRunner(
+	policyCheckStepRunner, err := runtime.NewPolicyCheckStepRunner(
 		defaultTfVersion,
 		policy.NewConfTestExecutorWorkflow(logger, binDir, &terraform.DefaultDownloader{}),
 	)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "initializing policy check runner")
+		return nil, errors.Wrap(err, "initializing policy check step runner")
 	}
 
-	applyRequirementHandler := &events.AggregateApplyRequirements{
+	applyRequirementHandler := &events.DefaultCommandRequirementHandler{
 		WorkingDir: workingDir,
 	}
 
@@ -576,14 +598,9 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 			TerraformExecutor: terraformClient,
 			DefaultTFVersion:  defaultTfVersion,
 		},
-		PlanStepRunner: &runtime.PlanStepRunner{
-			TerraformExecutor:   terraformClient,
-			DefaultTFVersion:    defaultTfVersion,
-			CommitStatusUpdater: commitStatusUpdater,
-			AsyncTFExec:         terraformClient,
-		},
+		PlanStepRunner:        runtime.NewPlanStepRunner(terraformClient, defaultTfVersion, commitStatusUpdater, terraformClient),
 		ShowStepRunner:        showStepRunner,
-		PolicyCheckStepRunner: policyCheckRunner,
+		PolicyCheckStepRunner: policyCheckStepRunner,
 		ApplyStepRunner: &runtime.ApplyStepRunner{
 			TerraformExecutor:   terraformClient,
 			DefaultTFVersion:    defaultTfVersion,
@@ -601,10 +618,12 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 			TerraformExecutor: terraformClient,
 			DefaultTFVersion:  defaultTfVersion,
 		},
-		WorkingDir:                 workingDir,
-		Webhooks:                   webhooksManager,
-		WorkingDirLocker:           workingDirLocker,
-		AggregateApplyRequirements: applyRequirementHandler,
+		ImportStepRunner:          runtime.NewImportStepRunner(terraformClient, defaultTfVersion),
+		StateRmStepRunner:         runtime.NewStateRmStepRunner(terraformClient, defaultTfVersion),
+		WorkingDir:                workingDir,
+		Webhooks:                  webhooksManager,
+		WorkingDirLocker:          workingDirLocker,
+		CommandRequirementHandler: applyRequirementHandler,
 	}
 
 	dbUpdater := &events.DBUpdater{
@@ -627,9 +646,10 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		ProjectCommandRunner: projectCommandRunner,
 		JobURLSetter:         jobs.NewJobURLSetter(router, commitStatusUpdater),
 	}
-	instrumentedProjectCmdRunner := &events.InstrumentedProjectCommandRunner{
-		ProjectCommandRunner: projectOutputWrapper,
-	}
+	instrumentedProjectCmdRunner := events.NewInstrumentedProjectCommandRunner(
+		statsScope,
+		projectOutputWrapper,
+	)
 
 	policyCheckCommandRunner := events.NewPolicyCheckCommandRunner(
 		dbUpdater,
@@ -641,6 +661,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		userConfig.QuietPolicyChecks,
 	)
 
+	pullReqStatusFetcher := vcs.NewPullReqStatusFetcher(vcsClient, userConfig.VCSStatusName)
 	planCommandRunner := events.NewPlanCommandRunner(
 		userConfig.SilenceVCSStatusNoPlans,
 		userConfig.SilenceVCSStatusNoProjects,
@@ -658,9 +679,10 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		userConfig.SilenceNoProjects,
 		backend,
 		lockingClient,
+		userConfig.DiscardApprovalOnPlanFlag,
+		pullReqStatusFetcher,
 	)
 
-	pullReqStatusFetcher := vcs.NewPullReqStatusFetcher(vcsClient)
 	applyCommandRunner := events.NewApplyCommandRunner(
 		vcsClient,
 		userConfig.DisableApplyAll,
@@ -675,7 +697,6 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		userConfig.ParallelPoolSize,
 		userConfig.SilenceNoProjects,
 		userConfig.SilenceVCSStatusNoProjects,
-		userConfig.VCSStatusName,
 		pullReqStatusFetcher,
 	)
 
@@ -687,6 +708,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		dbUpdater,
 		userConfig.SilenceNoProjects,
 		userConfig.SilenceVCSStatusNoPlans,
+		vcsClient,
 	)
 
 	unlockCommandRunner := events.NewUnlockCommandRunner(
@@ -703,12 +725,27 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		userConfig.SilenceNoProjects,
 	)
 
+	importCommandRunner := events.NewImportCommandRunner(
+		pullUpdater,
+		pullReqStatusFetcher,
+		projectCommandBuilder,
+		instrumentedProjectCmdRunner,
+	)
+
+	stateCommandRunner := events.NewStateCommandRunner(
+		pullUpdater,
+		projectCommandBuilder,
+		instrumentedProjectCmdRunner,
+	)
+
 	commentCommandRunnerByCmd := map[command.Name]events.CommentCommandRunner{
 		command.Plan:            planCommandRunner,
 		command.Apply:           applyCommandRunner,
 		command.ApprovePolicies: approvePoliciesCommandRunner,
 		command.Unlock:          unlockCommandRunner,
 		command.Version:         versionCommandRunner,
+		command.Import:          importCommandRunner,
+		command.State:           stateCommandRunner,
 	}
 
 	githubTeamAllowlistChecker, err := events.NewTeamAllowlistChecker(userConfig.GithubTeamAllowlist)
@@ -798,7 +835,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		CommentParser:                   commentParser,
 		Logger:                          logger,
 		Scope:                           statsScope,
-		ApplyDisabled:                   userConfig.DisableApply,
+		ApplyDisabled:                   disableApply,
 		GithubWebhookSecret:             []byte(userConfig.GithubWebhookSecret),
 		GithubRequestValidator:          &events_controllers.DefaultGithubRequestValidator{},
 		GitlabRequestParserValidator:    &events_controllers.DefaultGitlabRequestParserValidator{},
@@ -935,7 +972,7 @@ func (s *Server) Start() error {
 
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second) // nolint: vet
 	if err := server.Shutdown(ctx); err != nil {
-		return cli.NewExitError(fmt.Sprintf("while shutting down: %s", err), 1)
+		return fmt.Errorf("while shutting down: %s", err)
 	}
 	return nil
 }

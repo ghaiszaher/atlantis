@@ -73,7 +73,7 @@ func (c ConftestTestCommandArgs) build() ([]string, error) {
 
 // SourceResolver resolves the policy set to a local fs path
 //
-//go:generate pegomock generate -m --use-experimental-model-gen --package mocks -o mocks/mock_conftest_client.go SourceResolver
+//go:generate pegomock generate -m --package mocks -o mocks/mock_conftest_client.go SourceResolver
 type SourceResolver interface {
 	Resolve(policySet valid.PolicySet) (string, error)
 }
@@ -211,9 +211,14 @@ func (c *ConfTestExecutorWorkflow) sanitizeOutput(inputFile string, output strin
 }
 
 func (c *ConfTestExecutorWorkflow) EnsureExecutorVersion(log logging.SimpleLogging, v *version.Version) (string, error) {
-	// we have no information to proceed so fail hard
+	// we have no information to proceed, so fallback to `conftest` command or fail hard
 	if c.DefaultConftestVersion == nil && v == nil {
-		return "", errors.New("no conftest version configured/specified")
+		localPath, err := c.Exec.LookPath(conftestBinaryName)
+		if err == nil {
+			log.Info("conftest version is not specified, so fallback to conftest command")
+			return localPath, nil
+		}
+		return "", errors.New("no conftest version configured/specified or not found conftest command")
 	}
 
 	var versionToRetrieve *version.Version

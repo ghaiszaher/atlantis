@@ -355,14 +355,84 @@ func TestAzureDevopsSplitRepoFullName(t *testing.T) {
 	}
 }
 
-func TestPolicyCheckSuccess_Summary(t *testing.T) {
-	pcs := models.PolicyCheckSuccess{
-		PolicyCheckOutput: `WARN - <redacted plan file> - main - example main package
-
-20 tests, 19 passed, 1 warnings, 0 failures, 0 exceptions`,
+func TestPlanSuccess_Summary(t *testing.T) {
+	cases := []struct {
+		input string
+		exp   string
+	}{
+		{
+			"Note: Objects have changed outside of Terraform\ndummy\nPlan: 0 to add, 1 to change, 2 to destroy.",
+			"\n**Note: Objects have changed outside of Terraform**\nPlan: 0 to add, 1 to change, 2 to destroy.",
+		},
+		{
+			"dummy\nPlan: 100 to add, 111 to change, 222 to destroy.",
+			"Plan: 100 to add, 111 to change, 222 to destroy.",
+		},
+		{
+			"Note: Objects have changed outside of Terraform\ndummy\nNo changes. Infrastructure is up-to-date.",
+			"\n**Note: Objects have changed outside of Terraform**\nNo changes. Infrastructure is up-to-date.",
+		},
+		{
+			"dummy\nNo changes. Your infrastructure matches the configuration.",
+			"No changes. Your infrastructure matches the configuration.",
+		},
 	}
+	for i, c := range cases {
+		t.Run(fmt.Sprintf("summary %d", i), func(t *testing.T) {
+			pcs := models.PlanSuccess{
+				TerraformOutput: c.input,
+			}
+			Equals(t, c.exp, pcs.Summary())
+		})
+	}
+}
 
-	Equals(t, "20 tests, 19 passed, 1 warnings, 0 failures, 0 exceptions", pcs.Summary())
+func TestPlanSuccess_DiffSummary(t *testing.T) {
+	cases := []struct {
+		input string
+		exp   string
+	}{
+		{
+			"Note: Objects have changed outside of Terraform\ndummy\nPlan: 0 to add, 1 to change, 2 to destroy.",
+			"Plan: 0 to add, 1 to change, 2 to destroy.",
+		},
+		{
+			"dummy\nPlan: 100 to add, 111 to change, 222 to destroy.",
+			"Plan: 100 to add, 111 to change, 222 to destroy.",
+		},
+		{
+			"Note: Objects have changed outside of Terraform\ndummy\nNo changes. Infrastructure is up-to-date.",
+			"No changes. Infrastructure is up-to-date.",
+		},
+		{
+			"dummy\nNo changes. Your infrastructure matches the configuration.",
+			"No changes. Your infrastructure matches the configuration.",
+		},
+	}
+	for i, c := range cases {
+		t.Run(fmt.Sprintf("summary %d", i), func(t *testing.T) {
+			pcs := models.PlanSuccess{
+				TerraformOutput: c.input,
+			}
+			Equals(t, c.exp, pcs.DiffSummary())
+		})
+	}
+}
+
+func TestPolicyCheckSuccess_Summary(t *testing.T) {
+	cases := []string{
+		"20 tests, 19 passed, 2 warnings, 0 failures, 0 exceptions",
+		"3 tests, 0 passed, 1 warning, 1 failure, 0 exceptions, 1 skipped",
+		"1 test, 0 passed, 1 warning, 1 failure, 1 exception",
+	}
+	for i, summary := range cases {
+		t.Run(fmt.Sprintf("summary %d", i), func(t *testing.T) {
+			pcs := models.PolicyCheckSuccess{
+				PolicyCheckOutput: `WARN - <redacted plan file> - main - example main package\n` + summary,
+			}
+			Equals(t, summary, pcs.Summary())
+		})
+	}
 }
 
 func TestPullStatus_StatusCount(t *testing.T) {

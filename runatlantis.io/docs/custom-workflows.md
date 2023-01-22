@@ -47,6 +47,20 @@ workflows:
       - init
       - plan:
           extra_args: ["-var-file", "production.tfvars"]
+    apply:
+      steps:
+        - apply:
+            extra_args: ["-var-file", "production.tfvars"]
+    import:
+      steps:
+        - init
+        - import:
+            extra_args: ["-var-file", "production.tfvars"]
+    state_rm:
+      steps:
+        - init
+        - state_rm:
+            extra_args: ["-lock=false"]
 ```
 Then in your repo-level `atlantis.yaml` file, you would reference the workflows:
 ```yaml
@@ -103,7 +117,7 @@ workflows:
           extra_args: ["-lock=false"]
 ```
 
-If [policy checking](https://www.runatlantis.io/docs/policy-checking.html#how-it-works) is enabled, `extra_args` can also be used to change the default behaviour of conftest.
+If [policy checking](/docs/policy-checking.html#how-it-works) is enabled, `extra_args` can also be used to change the default behaviour of conftest.
 
 ```yaml
 workflows:
@@ -144,7 +158,7 @@ workflows:
 ```
 
 ### cdktf
-Here are the requirements to enable [cdktf](https://www.terraform.io/cdktf)
+Here are the requirements to enable [cdktf](https://developer.hashicorp.com/terraform/cdktf)
 
 - A custom image with `cdktf` installed
 - The autoplan file updated to trigger off of `**/cdk.tf.json`
@@ -364,12 +378,16 @@ projects:
 ```yaml
 plan:
 apply:
+import:
+state_rm:
 ```
 
-| Key   | Type            | Default               | Required | Description                    |
-|-------|-----------------|-----------------------|----------|--------------------------------|
-| plan  | [Stage](#stage) | `steps: [init, plan]` | no       | How to plan for this project.  |
-| apply | [Stage](#stage) | `steps: [apply]`      | no       | How to apply for this project. |
+| Key      | Type            | Default                   | Required | Description                           |
+|----------|-----------------|---------------------------|----------|---------------------------------------|
+| plan     | [Stage](#stage) | `steps: [init, plan]`     | no       | How to plan for this project.         |
+| apply    | [Stage](#stage) | `steps: [apply]`          | no       | How to apply for this project.        |
+| import   | [Stage](#stage) | `steps: [init, import]`   | no       | How to import for this project.       |
+| state_rm | [Stage](#stage) | `steps: [init, state_rm]` | no       | How to run state rm for this project. |
 
 ### Stage
 ```yaml
@@ -385,16 +403,18 @@ steps:
 | steps | array[[Step](#step)] | `[]`    | no       | List of steps for this stage. If the steps key is empty, no steps will be run for this stage. |
 
 ### Step
-#### Built-In Commands: init, plan, apply
+#### Built-In Commands
 Steps can be a single string for a built-in command.
 ```yaml
 - init
 - plan
 - apply
+- import
+- state_rm
 ```
-| Key             | Type   | Default | Required | Description                                                                                            |
-| --------------- | ------ | ------- | -------- | ------------------------------------------------------------------------------------------------------ |
-| init/plan/apply | string | none    | no       | Use a built-in command without additional configuration. Only `init`, `plan` and `apply` are supported |
+| Key                             | Type   | Default | Required | Description                                                                                                                  |
+|---------------------------------|--------|---------|----------|------------------------------------------------------------------------------------------------------------------------------|
+| init/plan/apply/import/state_rm | string | none    | no       | Use a built-in command without additional configuration. Only `init`, `plan`, `apply`, `import` and `state_rm` are supported |
 
 #### Built-In Command With Extra Args
 A map from string to `extra_args` for a built-in command with extra arguments.
@@ -405,10 +425,14 @@ A map from string to `extra_args` for a built-in command with extra arguments.
     extra_args: [arg1, arg2]
 - apply:
     extra_args: [arg1, arg2]
+- import:
+    extra_args: [arg1, arg2]
+- state_rm:
+    extra_args: [arg1, arg2]
 ```
-| Key             | Type                               | Default | Required | Description                                                                                                                                         |
-|-----------------|------------------------------------|---------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| init/plan/apply | map[`extra_args` -> array[string]] | none    | no       | Use a built-in command and append `extra_args`. Only `init`, `plan` and `apply` are supported as keys and only `extra_args` is supported as a value |
+| Key                             | Type                               | Default | Required | Description                                                                                                                                                               |
+|---------------------------------|------------------------------------|---------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| init/plan/apply/import/state_rm | map[`extra_args` -> array[string]] | none    | no       | Use a built-in command and append `extra_args`. Only `init`, `plan`, `apply`, `import` and `state_rm` are supported as keys and only `extra_args` is supported as a value |
 
 #### Custom `run` Command
 Or a custom command

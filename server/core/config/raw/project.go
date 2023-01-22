@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	DefaultWorkspace           = "default"
-	ApprovedApplyRequirement   = "approved"
-	MergeableApplyRequirement  = "mergeable"
-	UnDivergedApplyRequirement = "undiverged"
+	DefaultWorkspace      = "default"
+	ApprovedRequirement   = "approved"
+	MergeableRequirement  = "mergeable"
+	UnDivergedRequirement = "undiverged"
 )
 
 type Project struct {
@@ -28,7 +28,9 @@ type Project struct {
 	Workflow                  *string   `yaml:"workflow,omitempty"`
 	TerraformVersion          *string   `yaml:"terraform_version,omitempty"`
 	Autoplan                  *Autoplan `yaml:"autoplan,omitempty"`
+	PlanRequirements          []string  `yaml:"plan_requirements,omitempty"`
 	ApplyRequirements         []string  `yaml:"apply_requirements,omitempty"`
+	ImportRequirements        []string  `yaml:"import_requirements,omitempty"`
 	DeleteSourceBranchOnMerge *bool     `yaml:"delete_source_branch_on_merge,omitempty"`
 	RepoLocking               *bool     `yaml:"repo_locking,omitempty"`
 	ExecutionOrderGroup       *int      `yaml:"execution_order_group,omitempty"`
@@ -72,7 +74,9 @@ func (p Project) Validate() error {
 
 	return validation.ValidateStruct(&p,
 		validation.Field(&p.Dir, validation.Required, validation.By(hasDotDot)),
+		validation.Field(&p.PlanRequirements, validation.By(validPlanReq)),
 		validation.Field(&p.ApplyRequirements, validation.By(validApplyReq)),
+		validation.Field(&p.ImportRequirements, validation.By(validImportReq)),
 		validation.Field(&p.TerraformVersion, validation.By(VersionValidator)),
 		validation.Field(&p.Name, validation.By(validName)),
 		validation.Field(&p.Branch, validation.By(branchValid)),
@@ -110,8 +114,10 @@ func (p Project) ToValid() valid.Project {
 		v.Autoplan = p.Autoplan.ToValid()
 	}
 
-	// There are no default apply requirements.
+	// There are no default apply/import requirements.
+	v.PlanRequirements = p.PlanRequirements
 	v.ApplyRequirements = p.ApplyRequirements
+	v.ImportRequirements = p.ImportRequirements
 
 	v.Name = p.Name
 
@@ -139,11 +145,31 @@ func validProjectName(name string) bool {
 	return nameWithoutSlashes == url.QueryEscape(nameWithoutSlashes)
 }
 
+func validPlanReq(value interface{}) error {
+	reqs := value.([]string)
+	for _, r := range reqs {
+		if r != ApprovedRequirement && r != MergeableRequirement && r != UnDivergedRequirement {
+			return fmt.Errorf("%q is not a valid plan_requirement, only %q, %q and %q are supported", r, ApprovedRequirement, MergeableRequirement, UnDivergedRequirement)
+		}
+	}
+	return nil
+}
+
 func validApplyReq(value interface{}) error {
 	reqs := value.([]string)
 	for _, r := range reqs {
-		if r != ApprovedApplyRequirement && r != MergeableApplyRequirement && r != UnDivergedApplyRequirement {
-			return fmt.Errorf("%q is not a valid apply_requirement, only %q, %q and %q are supported", r, ApprovedApplyRequirement, MergeableApplyRequirement, UnDivergedApplyRequirement)
+		if r != ApprovedRequirement && r != MergeableRequirement && r != UnDivergedRequirement {
+			return fmt.Errorf("%q is not a valid apply_requirement, only %q, %q and %q are supported", r, ApprovedRequirement, MergeableRequirement, UnDivergedRequirement)
+		}
+	}
+	return nil
+}
+
+func validImportReq(value interface{}) error {
+	reqs := value.([]string)
+	for _, r := range reqs {
+		if r != ApprovedRequirement && r != MergeableRequirement && r != UnDivergedRequirement {
+			return fmt.Errorf("%q is not a valid import_requirement, only %q, %q and %q are supported", r, ApprovedRequirement, MergeableRequirement, UnDivergedRequirement)
 		}
 	}
 	return nil
