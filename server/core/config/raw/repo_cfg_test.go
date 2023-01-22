@@ -307,6 +307,8 @@ func TestConfig_ToValid(t *testing.T) {
 						Plan:        &raw.Stage{},
 						Apply:       nil,
 						PolicyCheck: nil,
+						Import:      nil,
+						StateRm:     nil,
 					},
 				},
 			},
@@ -316,25 +318,12 @@ func TestConfig_ToValid(t *testing.T) {
 				ParallelApply: false,
 				Workflows: map[string]valid.Workflow{
 					"myworkflow": {
-						Name: "myworkflow",
-						Plan: valid.DefaultPlanStage,
-						PolicyCheck: valid.Stage{
-							Steps: []valid.Step{
-								{
-									StepName: "show",
-								},
-								{
-									StepName: "policy_check",
-								},
-							},
-						},
-						Apply: valid.Stage{
-							Steps: []valid.Step{
-								{
-									StepName: "apply",
-								},
-							},
-						},
+						Name:        "myworkflow",
+						Plan:        valid.DefaultPlanStage,
+						PolicyCheck: valid.DefaultPolicyCheckStage,
+						Apply:       valid.DefaultApplyStage,
+						Import:      valid.DefaultImportStage,
+						StateRm:     valid.DefaultStateRmStage,
 					},
 				},
 			},
@@ -365,6 +354,20 @@ func TestConfig_ToValid(t *testing.T) {
 							Steps: []raw.Step{
 								{
 									Key: String("init"),
+								},
+							},
+						},
+						Import: &raw.Stage{
+							Steps: []raw.Step{
+								{
+									Key: String("import"),
+								},
+							},
+						},
+						StateRm: &raw.Stage{
+							Steps: []raw.Step{
+								{
+									Key: String("state_rm"),
 								},
 							},
 						},
@@ -401,6 +404,20 @@ func TestConfig_ToValid(t *testing.T) {
 							Steps: []valid.Step{
 								{
 									StepName: "init",
+								},
+							},
+						},
+						Import: valid.Stage{
+							Steps: []valid.Step{
+								{
+									StepName: "import",
+								},
+							},
+						},
+						StateRm: valid.Stage{
+							Steps: []valid.Step{
+								{
+									StepName: "state_rm",
 								},
 							},
 						},

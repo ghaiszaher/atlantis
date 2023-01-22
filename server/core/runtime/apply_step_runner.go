@@ -41,7 +41,7 @@ func (a *ApplyStepRunner) Run(ctx command.ProjectContext, extraArgs []string, pa
 
 	// TODO: Leverage PlanTypeStepRunnerDelegate here
 	if IsRemotePlan(contents) {
-		args := append(append([]string{"apply", "-input=false"}, extraArgs...), ctx.EscapedCommentArgs...)
+		args := append(append([]string{"apply", "-input=false", "-no-color"}, extraArgs...), ctx.EscapedCommentArgs...)
 		out, err = a.runRemoteApply(ctx, args, path, planPath, ctx.TerraformVersion, envs)
 		if err == nil {
 			out = a.cleanRemoteApplyOutput(out)
@@ -126,7 +126,7 @@ func (a *ApplyStepRunner) runRemoteApply(
 
 	// updateStatusF will update the commit status and log any error.
 	updateStatusF := func(status models.CommitStatus, url string) {
-		if err := a.CommitStatusUpdater.UpdateProject(ctx, command.Apply, status, url); err != nil {
+		if err := a.CommitStatusUpdater.UpdateProject(ctx, command.Apply, status, url, nil); err != nil {
 			ctx.Log.Err("unable to update status: %s", err)
 		}
 	}
