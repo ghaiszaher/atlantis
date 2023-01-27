@@ -220,6 +220,7 @@ func (p *PlanCommandRunner) run(ctx *command.Context, cmd *CommentCommand) {
 	if !cmd.IsForSpecificProject() {
 		ctx.Log.Debug("deleting previous plans and locks")
 		p.deletePlans(ctx)
+		// TODO(Ghais): this gives the lock to the next PR in the queue and the current PR can no longer be planned
 		_, _, err = p.lockingLocker.UnlockByPull(baseRepo.FullName, pull.Num)
 		if err != nil {
 			ctx.Log.Err("deleting locks: %s", err)
