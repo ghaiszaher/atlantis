@@ -228,9 +228,8 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 			var err error
 			dequeuedLock, err = b.dequeueNextInLine(currQueue, bucket, key, queueBucket)
 			return err
-		} else {
-			return bucket.Delete([]byte(key))
 		}
+		return bucket.Delete([]byte(key))
 	})
 
 	err = errors.Wrap(err, "DB transaction failed")
