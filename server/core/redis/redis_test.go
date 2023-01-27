@@ -215,7 +215,7 @@ func TestListAddRemove(t *testing.T) {
 	rdb := newTestRedis(s)
 	_, _, _, err := rdb.TryLock(lock)
 	Ok(t, err)
-	_, _, err = rdb.Unlock(project, workspace)
+	_, _, err = rdb.Unlock(project, workspace, true)
 	Ok(t, err)
 
 	ls, err := rdb.List()
@@ -285,7 +285,7 @@ func TestUnlockingNoLocks(t *testing.T) {
 	t.Log("unlocking with no locks should succeed")
 	s := miniredis.RunT(t)
 	rdb := newTestRedis(s)
-	_, _, err := rdb.Unlock(project, workspace)
+	_, _, err := rdb.Unlock(project, workspace, true)
 
 	Ok(t, err)
 }
@@ -297,7 +297,7 @@ func TestUnlocking(t *testing.T) {
 
 	_, _, _, err := rdb.TryLock(lock)
 	Ok(t, err)
-	_, _, err = rdb.Unlock(project, workspace)
+	_, _, err = rdb.Unlock(project, workspace, true)
 	Ok(t, err)
 
 	// should be no locks listed
@@ -338,13 +338,13 @@ func TestUnlockingMultiple(t *testing.T) {
 	Ok(t, err)
 
 	// now try and unlock them
-	_, _, err = rdb.Unlock(new3.Project, new3.Workspace)
+	_, _, err = rdb.Unlock(new3.Project, new3.Workspace, true)
 	Ok(t, err)
-	_, _, err = rdb.Unlock(new2.Project, workspace)
+	_, _, err = rdb.Unlock(new2.Project, workspace, true)
 	Ok(t, err)
-	_, _, err = rdb.Unlock(new.Project, workspace)
+	_, _, err = rdb.Unlock(new.Project, workspace, true)
 	Ok(t, err)
-	_, _, err = rdb.Unlock(project, workspace)
+	_, _, err = rdb.Unlock(project, workspace, true)
 	Ok(t, err)
 
 	// should be none left
@@ -358,7 +358,7 @@ func TestUnlockByPullNone(t *testing.T) {
 	s := miniredis.RunT(t)
 	rdb := newTestRedis(s)
 
-	_, _, err := rdb.UnlockByPull("any/repo", 1)
+	_, _, err := rdb.UnlockByPull("any/repo", 1, true)
 	Ok(t, err)
 }
 
@@ -371,7 +371,7 @@ func TestUnlockByPullOne(t *testing.T) {
 
 	t.Log("...delete nothing when its the same repo but a different pull")
 	{
-		_, _, err := rdb.UnlockByPull(project.RepoFullName, pullNum+1)
+		_, _, err := rdb.UnlockByPull(project.RepoFullName, pullNum+1, true)
 		Ok(t, err)
 		ls, err := rdb.List()
 		Ok(t, err)
@@ -379,7 +379,7 @@ func TestUnlockByPullOne(t *testing.T) {
 	}
 	t.Log("...delete nothing when its the same pull but a different repo")
 	{
-		_, _, err := rdb.UnlockByPull("different/repo", pullNum)
+		_, _, err := rdb.UnlockByPull("different/repo", pullNum, true)
 		Ok(t, err)
 		ls, err := rdb.List()
 		Ok(t, err)
@@ -387,7 +387,7 @@ func TestUnlockByPullOne(t *testing.T) {
 	}
 	t.Log("...delete the lock when its the same repo and pull")
 	{
-		_, _, err := rdb.UnlockByPull(project.RepoFullName, pullNum)
+		_, _, err := rdb.UnlockByPull(project.RepoFullName, pullNum, true)
 		Ok(t, err)
 		ls, err := rdb.List()
 		Ok(t, err)
@@ -401,10 +401,10 @@ func TestUnlockByPullAfterUnlock(t *testing.T) {
 	rdb := newTestRedis(s)
 	_, _, _, err := rdb.TryLock(lock)
 	Ok(t, err)
-	_, _, err = rdb.Unlock(project, workspace)
+	_, _, err = rdb.Unlock(project, workspace, true)
 	Ok(t, err)
 
-	_, _, err = rdb.UnlockByPull(project.RepoFullName, pullNum)
+	_, _, err = rdb.UnlockByPull(project.RepoFullName, pullNum, true)
 	Ok(t, err)
 	ls, err := rdb.List()
 	Ok(t, err)
@@ -434,7 +434,7 @@ func TestUnlockByPullMatching(t *testing.T) {
 	Equals(t, 3, len(ls))
 
 	// should all be unlocked
-	_, _, err = rdb.UnlockByPull(project.RepoFullName, pullNum)
+	_, _, err = rdb.UnlockByPull(project.RepoFullName, pullNum, true)
 	Ok(t, err)
 	ls, err = rdb.List()
 	Ok(t, err)

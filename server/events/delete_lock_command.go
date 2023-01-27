@@ -41,7 +41,7 @@ func (l *DefaultDeleteLockCommand) DeleteLock(id string) (*models.ProjectLock, *
 
 // DeleteLocksByPull handles deleting all locks for the pull request
 func (l *DefaultDeleteLockCommand) DeleteLocksByPull(repoFullName string, pullNum int) (int, models.DequeueStatus, error) {
-	locks, dequeueStatus, err := l.Locker.UnlockByPull(repoFullName, pullNum)
+	locks, dequeueStatus, err := l.Locker.UnlockByPull(repoFullName, pullNum, true)
 	numLocks := len(locks)
 	if err != nil {
 		return numLocks, dequeueStatus, err

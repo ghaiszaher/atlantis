@@ -651,7 +651,7 @@ func TestRunAutoplanCommand_DeletePlans(t *testing.T) {
 	testdata.Pull.BaseRepo = testdata.GithubRepo
 	ch.RunAutoplanCommand(testdata.GithubRepo, testdata.GithubRepo, testdata.Pull, testdata.User)
 	pendingPlanFinder.VerifyWasCalledOnce().DeletePlans(tmp)
-	lockingLocker.VerifyWasCalledOnce().UnlockByPull(testdata.Pull.BaseRepo.FullName, testdata.Pull.Num)
+	lockingLocker.VerifyWasCalledOnce().UnlockByPull(testdata.Pull.BaseRepo.FullName, testdata.Pull.Num, true)
 }
 
 func TestRunGenericPlanCommand_DeletePlans(t *testing.T) {
@@ -673,7 +673,7 @@ func TestRunGenericPlanCommand_DeletePlans(t *testing.T) {
 	testdata.Pull.BaseRepo = testdata.GithubRepo
 	ch.RunCommentCommand(testdata.GithubRepo, nil, nil, testdata.User, testdata.Pull.Num, &events.CommentCommand{Name: command.Plan})
 	pendingPlanFinder.VerifyWasCalledOnce().DeletePlans(tmp)
-	lockingLocker.VerifyWasCalledOnce().UnlockByPull(testdata.Pull.BaseRepo.FullName, testdata.Pull.Num)
+	lockingLocker.VerifyWasCalledOnce().UnlockByPull(testdata.Pull.BaseRepo.FullName, testdata.Pull.Num, false)
 }
 
 func TestRunSpecificPlanCommandDoesnt_DeletePlans(t *testing.T) {
@@ -766,7 +766,7 @@ func TestRunGenericPlanCommand_DiscardApprovals(t *testing.T) {
 	testdata.Pull.BaseRepo = testdata.GithubRepo
 	ch.RunCommentCommand(testdata.GithubRepo, nil, nil, testdata.User, testdata.Pull.Num, &events.CommentCommand{Name: command.Plan})
 	pendingPlanFinder.VerifyWasCalledOnce().DeletePlans(tmp)
-	lockingLocker.VerifyWasCalledOnce().UnlockByPull(testdata.Pull.BaseRepo.FullName, testdata.Pull.Num)
+	lockingLocker.VerifyWasCalledOnce().UnlockByPull(testdata.Pull.BaseRepo.FullName, testdata.Pull.Num, false)
 
 	vcsClient.VerifyWasCalledOnce().DiscardReviews(matchers.AnyModelsRepo(), matchers.AnyModelsPullRequest())
 }

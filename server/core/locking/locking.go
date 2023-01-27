@@ -31,10 +31,10 @@ import (
 // Backend is an implementation of the locking API we require.
 type Backend interface {
 	TryLock(lock models.ProjectLock) (bool, models.ProjectLock, models.EnqueueStatus, error)
-	Unlock(project models.Project, workspace string) (*models.ProjectLock, *models.ProjectLock, error)
+	Unlock(project models.Project, workspace string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error)
 	List() ([]models.ProjectLock, error)
 	GetLock(project models.Project, workspace string) (*models.ProjectLock, error)
-	UnlockByPull(repoFullName string, pullNum int) ([]models.ProjectLock, models.DequeueStatus, error)
+	UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error)
 
 	GetQueueByLock(project models.Project, workspace string) ([]models.ProjectLock, error)
 
@@ -72,7 +72,7 @@ type Locker interface {
 	Unlock(key string) (*models.ProjectLock, *models.ProjectLock, error)
 	List() (map[string]models.ProjectLock, error)
 	GetQueueByLock(project models.Project, workspace string) ([]models.ProjectLock, error)
-	UnlockByPull(repoFullName string, pullNum int) ([]models.ProjectLock, models.DequeueStatus, error)
+	UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error)
 	GetLock(key string) (*models.ProjectLock, error)
 }
 
@@ -111,7 +111,7 @@ func (c *Client) Unlock(key string) (*models.ProjectLock, *models.ProjectLock, e
 	if err != nil {
 		return nil, nil, err
 	}
-	return c.backend.Unlock(project, workspace) // TODO Monika
+	return c.backend.Unlock(project, workspace, false) // TODO Monika
 }
 
 // List returns a map of all locks with their lock key as the map key.
@@ -134,8 +134,8 @@ func (c *Client) GetQueueByLock(project models.Project, workspace string) ([]mod
 
 // TODO monikma extend the tests
 // UnlockByPull deletes all locks associated with that pull request.
-func (c *Client) UnlockByPull(repoFullName string, pullNum int) ([]models.ProjectLock, models.DequeueStatus, error) {
-	return c.backend.UnlockByPull(repoFullName, pullNum)
+func (c *Client) UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error) {
+	return c.backend.UnlockByPull(repoFullName, pullNum, updateQueue)
 }
 
 // GetLock attempts to get the lock stored at key. If successful,
@@ -202,7 +202,7 @@ func (c *NoOpLocker) GetQueueByLock(project models.Project, workspace string) ([
 }
 
 // UnlockByPull deletes all locks associated with that pull request.
-func (c *NoOpLocker) UnlockByPull(repoFullName string, pullNum int) ([]models.ProjectLock, models.DequeueStatus, error) {
+func (c *NoOpLocker) UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error) {
 	return []models.ProjectLock{}, models.DequeueStatus{}, nil
 }
 

@@ -69,7 +69,7 @@ func TestCleanUpPullUnlockErr(t *testing.T) {
 		PullClosedTemplate: &events.PullClosedEventTemplate{},
 	}
 	err = errors.New("err")
-	When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num)).ThenReturn(nil, models.DequeueStatus{ProjectLocks: nil}, err)
+	When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(nil, models.DequeueStatus{ProjectLocks: nil}, err)
 	actualErr := pce.CleanUpPull(testdata.GithubRepo, testdata.Pull)
 	Equals(t, "cleaning up locks: err", actualErr.Error())
 }
@@ -89,7 +89,7 @@ func TestCleanUpPullNoLocks(t *testing.T) {
 		WorkingDir: w,
 		Backend:    db,
 	}
-	When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num)).ThenReturn(nil, models.DequeueStatus{ProjectLocks: nil}, nil)
+	When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(nil, models.DequeueStatus{ProjectLocks: nil}, nil)
 	err = pce.CleanUpPull(testdata.GithubRepo, testdata.Pull)
 	Ok(t, err)
 	cp.VerifyWasCalled(Never()).CreateComment(matchers.AnyModelsRepo(), AnyInt(), AnyString(), AnyString())
@@ -175,7 +175,7 @@ func TestCleanUpPullComments(t *testing.T) {
 				Backend:    db,
 			}
 			t.Log("testing: " + c.Description)
-			When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num)).ThenReturn(c.Locks, models.DequeueStatus{ProjectLocks: nil}, nil)
+			When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(c.Locks, models.DequeueStatus{ProjectLocks: nil}, nil)
 			err = pce.CleanUpPull(testdata.GithubRepo, testdata.Pull)
 			Ok(t, err)
 			_, _, comment, _ := cp.VerifyWasCalledOnce().CreateComment(matchers.AnyModelsRepo(), AnyInt(), AnyString(), AnyString()).GetCapturedArguments()
@@ -263,7 +263,7 @@ func TestCleanUpLogStreaming(t *testing.T) {
 				Workspace: "default",
 			},
 		}
-		When(locker.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num)).ThenReturn(locks, models.DequeueStatus{ProjectLocks: nil}, nil)
+		When(locker.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(locks, models.DequeueStatus{ProjectLocks: nil}, nil)
 
 		// Clean up.
 		err = pullClosedExecutor.CleanUpPull(testdata.GithubRepo, testdata.Pull)
