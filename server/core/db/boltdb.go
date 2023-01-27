@@ -109,20 +109,18 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 			currLock = newLock
 			return nil
 		}
-		// checking if current lock is with the same PR
-		var currLock models.ProjectLock
-		if err := json.Unmarshal(currLockSerialized, &currLock); err != nil {
-			return errors.Wrap(err, "failed to deserialize current lock")
-		}
-		if currLock.Pull.Num == newLock.Pull.Num {
-			lockAcquired = true
-			return nil
-		}
 
 		// otherwise the lock fails, return to caller the run that's holding the lock
 		if err := json.Unmarshal(currLockSerialized, &currLock); err != nil {
 			return errors.Wrap(err, "failed to deserialize current lock")
 		}
+
+		// checking if current lock is with the same PR
+		if currLock.Pull.Num == newLock.Pull.Num {
+			lockAcquired = true
+			return nil
+		}
+
 		lockAcquired = false
 
 		// Enqueuing
