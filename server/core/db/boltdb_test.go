@@ -257,7 +257,7 @@ func TestListAddRemove(t *testing.T) {
 	defer cleanupDB(db)
 	_, _, _, err := b.TryLock(lock)
 	Ok(t, err)
-	_, _, err = b.Unlock(project, workspace)
+	_, _, err = b.Unlock(project, workspace, true)
 	Ok(t, err)
 
 	ls, err := b.List()
@@ -327,7 +327,7 @@ func TestUnlockingNoLocks(t *testing.T) {
 	t.Log("unlocking with no locks should succeed")
 	db, b := newTestDB()
 	defer cleanupDB(db)
-	_, _, err := b.Unlock(project, workspace)
+	_, _, err := b.Unlock(project, workspace, true)
 
 	Ok(t, err)
 }
@@ -339,7 +339,7 @@ func TestUnlocking(t *testing.T) {
 
 	_, _, _, err := b.TryLock(lock)
 	Ok(t, err)
-	_, _, err = b.Unlock(project, workspace)
+	_, _, err = b.Unlock(project, workspace, true)
 	Ok(t, err)
 
 	// should be no locks listed
@@ -380,13 +380,13 @@ func TestUnlockingMultiple(t *testing.T) {
 	Ok(t, err)
 
 	// now try and unlock them
-	_, _, err = b.Unlock(new3.Project, new3.Workspace)
+	_, _, err = b.Unlock(new3.Project, new3.Workspace, true)
 	Ok(t, err)
-	_, _, err = b.Unlock(new2.Project, workspace)
+	_, _, err = b.Unlock(new2.Project, workspace, true)
 	Ok(t, err)
-	_, _, err = b.Unlock(new.Project, workspace)
+	_, _, err = b.Unlock(new.Project, workspace, true)
 	Ok(t, err)
-	_, _, err = b.Unlock(project, workspace)
+	_, _, err = b.Unlock(project, workspace, true)
 	Ok(t, err)
 
 	// should be none left
@@ -400,7 +400,7 @@ func TestUnlockByPullNone(t *testing.T) {
 	db, b := newTestDB()
 	defer cleanupDB(db)
 
-	_, _, err := b.UnlockByPull("any/repo", 1)
+	_, _, err := b.UnlockByPull("any/repo", 1, true)
 	Ok(t, err)
 }
 
@@ -413,7 +413,7 @@ func TestUnlockByPullOne(t *testing.T) {
 
 	t.Log("...delete nothing when its the same repo but a different pull")
 	{
-		_, _, err := b.UnlockByPull(project.RepoFullName, pullNum+1)
+		_, _, err := b.UnlockByPull(project.RepoFullName, pullNum+1, true)
 		Ok(t, err)
 		ls, err := b.List()
 		Ok(t, err)
@@ -421,7 +421,7 @@ func TestUnlockByPullOne(t *testing.T) {
 	}
 	t.Log("...delete nothing when its the same pull but a different repo")
 	{
-		_, _, err := b.UnlockByPull("different/repo", pullNum)
+		_, _, err := b.UnlockByPull("different/repo", pullNum, true)
 		Ok(t, err)
 		ls, err := b.List()
 		Ok(t, err)
@@ -429,7 +429,7 @@ func TestUnlockByPullOne(t *testing.T) {
 	}
 	t.Log("...delete the lock when its the same repo and pull")
 	{
-		_, _, err := b.UnlockByPull(project.RepoFullName, pullNum)
+		_, _, err := b.UnlockByPull(project.RepoFullName, pullNum, true)
 		Ok(t, err)
 		ls, err := b.List()
 		Ok(t, err)
@@ -443,10 +443,10 @@ func TestUnlockByPullAfterUnlock(t *testing.T) {
 	defer cleanupDB(db)
 	_, _, _, err := b.TryLock(lock)
 	Ok(t, err)
-	_, _, err = b.Unlock(project, workspace)
+	_, _, err = b.Unlock(project, workspace, true)
 	Ok(t, err)
 
-	_, _, err = b.UnlockByPull(project.RepoFullName, pullNum)
+	_, _, err = b.UnlockByPull(project.RepoFullName, pullNum, true)
 	Ok(t, err)
 	ls, err := b.List()
 	Ok(t, err)
@@ -476,7 +476,7 @@ func TestUnlockByPullMatching(t *testing.T) {
 	Equals(t, 3, len(ls))
 
 	// should all be unlocked
-	_, _, err = b.UnlockByPull(project.RepoFullName, pullNum)
+	_, _, err = b.UnlockByPull(project.RepoFullName, pullNum, true)
 	Ok(t, err)
 	ls, err = b.List()
 	Ok(t, err)
@@ -510,7 +510,7 @@ func TestDequeueAfterUnlock(t *testing.T) {
 	Equals(t, new2.Pull, queue[1].Pull)
 
 	// first lock unlocked -> second lock dequeued and lock acquired
-	_, dequeuedLock, err := b.Unlock(lock.Project, lock.Workspace)
+	_, dequeuedLock, err := b.Unlock(lock.Project, lock.Workspace, true)
 	Ok(t, err)
 	queue, err = b.GetQueueByLock(lock.Project, lock.Workspace)
 	Ok(t, err)
@@ -518,13 +518,30 @@ func TestDequeueAfterUnlock(t *testing.T) {
 	Equals(t, 1, len(queue))
 	Equals(t, new2.Pull, queue[0].Pull)
 
+	// second lock unlocked without touching the queue
+	_, dequeuedLock, err = b.Unlock(new.Project, new.Workspace, false)
+	Ok(t, err)
+	Assert(t, dequeuedLock == nil, "exp nil")
+	queue, err = b.GetQueueByLock(lock.Project, lock.Workspace)
+	Ok(t, err)
+	Equals(t, 1, len(queue))
+	Equals(t, new2.Pull, queue[0].Pull)
+
+	l, err := b.GetLock(project, workspace)
+	Ok(t, err)
+	Assert(t, l == nil, "exp nil")
+
+	// bring the second lock again
+	_, _, _, err = b.TryLock(new)
+	Ok(t, err)
+
 	// second lock unlocked -> third lock dequeued and lock acquired
-	_, dequeuedLock, err = b.Unlock(new.Project, new.Workspace)
+	_, dequeuedLock, err = b.Unlock(new.Project, new.Workspace, true)
 	Ok(t, err)
 	Equals(t, new2, *dequeuedLock)
 
 	// third lock unlocked -> no more locks in the queue
-	_, dequeuedLock, err = b.Unlock(new2.Project, new2.Workspace)
+	_, dequeuedLock, err = b.Unlock(new2.Project, new2.Workspace, true)
 	Ok(t, err)
 	Equals(t, (*models.ProjectLock)(nil), dequeuedLock)
 }
@@ -553,7 +570,7 @@ func TestDequeueAfterUnlockByPull(t *testing.T) {
 	_, _, _, err = b.TryLock(lock4)
 	Ok(t, err)
 
-	_, dequeueStatus, err := b.UnlockByPull(project.RepoFullName, pullNum)
+	_, dequeueStatus, err := b.UnlockByPull(project.RepoFullName, pullNum, true)
 	Ok(t, err)
 
 	Equals(t, 2, len(dequeueStatus.ProjectLocks))

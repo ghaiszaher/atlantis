@@ -95,7 +95,7 @@ func (r *RedisDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock,
 // If there is no lock, then it will return a nil pointer.
 // If there is a lock, then it will delete it, and then return a pointer
 // to the deleted lock.
-func (r *RedisDB) Unlock(project models.Project, workspace string) (*models.ProjectLock, *models.ProjectLock, error) {
+func (r *RedisDB) Unlock(project models.Project, workspace string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error) {
 	var lock models.ProjectLock
 	key := r.lockKey(project, workspace)
 
@@ -157,7 +157,7 @@ func (r *RedisDB) GetLock(project models.Project, workspace string) (*models.Pro
 }
 
 // UnlockByPull deletes all locks associated with that pull request and returns them.
-func (r *RedisDB) UnlockByPull(repoFullName string, pullNum int) ([]models.ProjectLock, models.DequeueStatus, error) {
+func (r *RedisDB) UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error) {
 	var locks []models.ProjectLock
 
 	iter := r.client.Scan(ctx, 0, fmt.Sprintf("pr/%s*", repoFullName), 0).Iterator()
@@ -172,7 +172,7 @@ func (r *RedisDB) UnlockByPull(repoFullName string, pullNum int) ([]models.Proje
 		}
 		if lock.Pull.Num == pullNum {
 			locks = append(locks, lock)
-			if _, _, err := r.Unlock(lock.Project, lock.Workspace); err != nil {
+			if _, _, err := r.Unlock(lock.Project, lock.Workspace, updateQueue); err != nil {
 				return locks, models.DequeueStatus{ProjectLocks: nil}, errors.Wrapf(err, "unlocking repo %s, path %s, workspace %s", lock.Project.RepoFullName, lock.Project.Path, lock.Workspace)
 			}
 		}
