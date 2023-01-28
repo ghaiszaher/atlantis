@@ -172,22 +172,21 @@ func (r *RedisDB) Unlock(project models.Project, workspace string, updateQueue b
 				if len(currQueue) == 0 {
 					r.client.Del(ctx, queueKey)
 					return &lock, nil, nil
-				} else {
-					dequeuedLock := &currQueue[0]
-					newQueue := currQueue[1:]
-					dequeuedLockSerialized, _ := json.Marshal(*dequeuedLock)
-					err := r.client.Set(ctx, key, dequeuedLockSerialized, 0).Err()
-					if err != nil {
-						return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
-					}
-
-					newQueueSerialized, _ := json.Marshal(newQueue)
-					err = r.client.Set(ctx, queueKey, newQueueSerialized, 0).Err()
-					if err != nil {
-						return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
-					}
-					return &lock, dequeuedLock, nil
 				}
+				dequeuedLock := &currQueue[0]
+				newQueue := currQueue[1:]
+				dequeuedLockSerialized, _ := json.Marshal(*dequeuedLock)
+				err := r.client.Set(ctx, key, dequeuedLockSerialized, 0).Err()
+				if err != nil {
+					return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
+				}
+
+				newQueueSerialized, _ := json.Marshal(newQueue)
+				err = r.client.Set(ctx, queueKey, newQueueSerialized, 0).Err()
+				if err != nil {
+					return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
+				}
+				return &lock, dequeuedLock, nil
 			}
 		}
 		return &lock, nil, nil
