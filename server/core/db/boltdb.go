@@ -294,7 +294,6 @@ func (b *BoltDB) GetQueueByLock(project models.Project, workspace string) ([]mod
 	})
 	if err != nil {
 		return queue, errors.Wrap(err, "DB transaction failed while fetching Queue")
-
 	}
 	return queue, err
 }

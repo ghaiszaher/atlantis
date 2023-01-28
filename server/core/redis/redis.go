@@ -87,8 +87,54 @@ func (r *RedisDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock,
 		if err := json.Unmarshal([]byte(val), &currLock); err != nil {
 			return false, currLock, enqueueStatus, errors.Wrap(err, "failed to deserialize current lock")
 		}
+		// checking if current lock is with the same PR
+		if currLock.Pull.Num == newLock.Pull.Num {
+			return false, currLock, enqueueStatus, nil
+		}
+
+		queueKey := r.queueKey(newLock.Project, newLock.Workspace)
+		currQueueSerialized, err := r.client.Get(ctx, queueKey).Result()
+		var queue []models.ProjectLock
+		if err == redis.Nil {
+			queue = []models.ProjectLock{}
+		} else if err != nil {
+			return false, currLock, enqueueStatus, errors.Wrap(err, "db transaction failed")
+		} else {
+			if err := json.Unmarshal([]byte(currQueueSerialized), &queue); err != nil {
+				return false, currLock, enqueueStatus, errors.Wrap(err, "failed to deserialize current queue")
+			}
+		}
+		// Lock is already in the queue
+		if indexInQueue := findPullRequest(queue, newLock.Pull.Num); indexInQueue > -1 {
+			enqueueStatus = models.EnqueueStatus{
+				Status:              models.AlreadyInTheQueue,
+				ProjectLocksInFront: indexInQueue + 1,
+			}
+			return false, currLock, enqueueStatus, nil
+		}
+
+		// Not in the queue, add it
+		newQueue := append(queue, newLock)
+		newQueueSerialized, _ := json.Marshal(newQueue)
+		err = r.client.Set(ctx, queueKey, newQueueSerialized, 0).Err()
+		if err != nil {
+			return false, currLock, enqueueStatus, errors.Wrap(err, "db transaction failed")
+		}
+		enqueueStatus = models.EnqueueStatus{
+			Status:              models.Enqueued,
+			ProjectLocksInFront: len(newQueue),
+		}
 		return false, currLock, enqueueStatus, nil
 	}
+}
+
+func findPullRequest(locks []models.ProjectLock, pullRequestNumber int) int {
+	for i := range locks {
+		if locks[i].Pull.Num == pullRequestNumber {
+			return i
+		}
+	}
+	return -1
 }
 
 // Unlock attempts to unlock the project and workspace.
@@ -109,6 +155,41 @@ func (r *RedisDB) Unlock(project models.Project, workspace string, updateQueue b
 			return nil, nil, errors.Wrap(err, "failed to deserialize current lock")
 		}
 		r.client.Del(ctx, key)
+		// Dequeue next item
+		if updateQueue {
+			queueKey := r.queueKey(project, workspace)
+			currQueueSerialized, err := r.client.Get(ctx, queueKey).Result()
+			if err == redis.Nil {
+				return &lock, nil, nil
+			} else if err != nil {
+				return &lock, nil, errors.Wrap(err, "db transaction failed")
+			} else {
+				var currQueue []models.ProjectLock
+				if err := json.Unmarshal([]byte(currQueueSerialized), &currQueue); err != nil {
+					return &lock, nil, errors.Wrap(err, "failed to deserialize queue for current lock")
+				}
+				// Queue is empty
+				if len(currQueue) == 0 {
+					r.client.Del(ctx, queueKey)
+					return &lock, nil, nil
+				} else {
+					dequeuedLock := &currQueue[0]
+					newQueue := currQueue[1:]
+					dequeuedLockSerialized, _ := json.Marshal(*dequeuedLock)
+					err := r.client.Set(ctx, key, dequeuedLockSerialized, 0).Err()
+					if err != nil {
+						return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
+					}
+
+					newQueueSerialized, _ := json.Marshal(newQueue)
+					err = r.client.Set(ctx, queueKey, newQueueSerialized, 0).Err()
+					if err != nil {
+						return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
+					}
+					return &lock, dequeuedLock, nil
+				}
+			}
+		}
 		return &lock, nil, nil
 	}
 }
@@ -159,6 +240,7 @@ func (r *RedisDB) GetLock(project models.Project, workspace string) (*models.Pro
 // UnlockByPull deletes all locks associated with that pull request and returns them.
 func (r *RedisDB) UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error) {
 	var locks []models.ProjectLock
+	var dequeuedLocks = make([]models.ProjectLock, 0, len(locks))
 
 	iter := r.client.Scan(ctx, 0, fmt.Sprintf("pr/%s*", repoFullName), 0).Iterator()
 	for iter.Next(ctx) {
@@ -172,21 +254,42 @@ func (r *RedisDB) UnlockByPull(repoFullName string, pullNum int, updateQueue boo
 		}
 		if lock.Pull.Num == pullNum {
 			locks = append(locks, lock)
-			if _, _, err := r.Unlock(lock.Project, lock.Workspace, updateQueue); err != nil {
+			_, dequeuedLock, err := r.Unlock(lock.Project, lock.Workspace, updateQueue)
+			if err != nil {
 				return locks, models.DequeueStatus{ProjectLocks: nil}, errors.Wrapf(err, "unlocking repo %s, path %s, workspace %s", lock.Project.RepoFullName, lock.Project.Path, lock.Workspace)
+			}
+			if dequeuedLock != nil {
+				dequeuedLocks = append(dequeuedLocks, *dequeuedLock)
 			}
 		}
 	}
 
 	if err := iter.Err(); err != nil {
-		return locks, models.DequeueStatus{ProjectLocks: nil}, errors.Wrap(err, "db transaction failed")
+		return locks, models.DequeueStatus{ProjectLocks: dequeuedLocks}, errors.Wrap(err, "db transaction failed")
 	}
 
-	return locks, models.DequeueStatus{ProjectLocks: nil}, nil
+	return locks, models.DequeueStatus{ProjectLocks: dequeuedLocks}, nil
 }
 
 func (r *RedisDB) GetQueueByLock(project models.Project, workspace string) ([]models.ProjectLock, error) {
-	return nil, errors.New("Unsupported feature")
+	key := r.queueKey(project, workspace)
+
+	val, err := r.client.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return nil, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "db transaction failed")
+	} else {
+		var queue []models.ProjectLock
+		if err := json.Unmarshal([]byte(val), &queue); err != nil {
+			return nil, errors.Wrapf(err, "deserializing queue at key %q", key)
+		}
+		for _, lock := range queue {
+			// need to set it to Local after deserialization due to https://github.com/golang/go/issues/19486
+			lock.Time = lock.Time.Local()
+		}
+		return queue, nil
+	}
 }
 
 func (r *RedisDB) LockCommand(cmdName command.Name, lockTime time.Time) (*command.Lock, error) {
@@ -383,6 +486,10 @@ func (r *RedisDB) deletePull(key string) error {
 
 func (r *RedisDB) lockKey(p models.Project, workspace string) string {
 	return fmt.Sprintf("pr/%s/%s/%s", p.RepoFullName, p.Path, workspace)
+}
+
+func (r *RedisDB) queueKey(p models.Project, workspace string) string {
+	return fmt.Sprintf("queue/%s/%s/%s", p.RepoFullName, p.Path, workspace)
 }
 
 func (r *RedisDB) commandLockKey(cmdName command.Name) string {
