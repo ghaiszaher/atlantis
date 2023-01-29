@@ -128,19 +128,19 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 		currQueueSerialized := queueBucket.Get([]byte(key))
 		// Queue doesn't exist, create one
 		if currQueueSerialized == nil {
-			newQueue := models.ProjectQueue{newLock}
+			newQueue := models.ProjectLockQueue{newLock}
 			newQueueSerialized, _ := json.Marshal(newQueue)
 			if err := queueBucket.Put([]byte(key), newQueueSerialized); err != nil {
 				return err
 			}
 			enqueueStatus = models.EnqueueStatus{
-				Status:              models.Enqueued,
-				ProjectLocksInFront: 1,
+				Status:     models.Enqueued,
+				QueueDepth: 1,
 			}
 			return nil
 		}
 		// Queue exists
-		var currQueue models.ProjectQueue
+		var currQueue models.ProjectLockQueue
 		if err := json.Unmarshal(currQueueSerialized, &currQueue); err != nil {
 			return errors.Wrap(err, "failed to deserialize queue for current lock")
 		}
@@ -148,8 +148,8 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 		// Lock is already in the queue
 		if indexInQueue := currQueue.FindPullRequest(newLock.Pull.Num); indexInQueue > -1 {
 			enqueueStatus = models.EnqueueStatus{
-				Status:              models.AlreadyInTheQueue,
-				ProjectLocksInFront: indexInQueue + 1,
+				Status:     models.AlreadyInTheQueue,
+				QueueDepth: indexInQueue + 1,
 			}
 			return nil
 		}
@@ -160,8 +160,8 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 			return err
 		}
 		enqueueStatus = models.EnqueueStatus{
-			Status:              models.Enqueued,
-			ProjectLocksInFront: len(newQueue),
+			Status:     models.Enqueued,
+			QueueDepth: len(newQueue),
 		}
 
 		return nil
@@ -177,7 +177,8 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 // Unlock attempts to unlock the project and workspace.
 // If there is no lock, then it will return a nil pointer.
 // If there is a lock, then it will delete it, and then return a pointer
-// to the deleted lock.
+// to the deleted lock. If updateQueue is true, it will also grant the
+// lock to the next PR in the queue, update the queue and return the dequeued lock.
 func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error) {
 	var lock models.ProjectLock
 	var dequeuedLock *models.ProjectLock
@@ -208,12 +209,12 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 			}
 
 			// Queue exists
-			var currQueue models.ProjectQueue
+			var currQueue models.ProjectLockQueue
 			if err := json.Unmarshal(currQueueSerialized, &currQueue); err != nil {
 				return errors.Wrap(err, "failed to deserialize queue for current lock")
 			}
 
-			var newQueue models.ProjectQueue
+			var newQueue models.ProjectLockQueue
 			dequeuedLock, newQueue = currQueue.Dequeue()
 
 			// A lock was dequeued - update current lock holder
@@ -271,8 +272,8 @@ func (b *BoltDB) List() ([]models.ProjectLock, error) {
 	return locks, nil
 }
 
-func (b *BoltDB) GetQueueByLock(project models.Project, workspace string) (models.ProjectQueue, error) {
-	var queue models.ProjectQueue
+func (b *BoltDB) GetQueueByLock(project models.Project, workspace string) (models.ProjectLockQueue, error) {
+	var queue models.ProjectLockQueue
 	err := b.db.View(func(tx *bolt.Tx) error {
 		// construct lock key
 		key := b.lockKey(project, workspace)

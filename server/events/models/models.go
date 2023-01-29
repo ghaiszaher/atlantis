@@ -557,9 +557,9 @@ type WorkflowHookCommandContext struct {
 	HookID string
 }
 
-type ProjectQueue []ProjectLock
+type ProjectLockQueue []ProjectLock
 
-func (q ProjectQueue) FindPullRequest(pullRequestNumber int) int {
+func (q ProjectLockQueue) FindPullRequest(pullRequestNumber int) int {
 	for i := range q {
 		if q[i].Pull.Num == pullRequestNumber {
 			return i
@@ -570,7 +570,7 @@ func (q ProjectQueue) FindPullRequest(pullRequestNumber int) int {
 
 // Dequeue dequeues the next item and returns the dequeued lock and the new queue.
 // if the queue is empty, returns nil and the current queue
-func (q ProjectQueue) Dequeue() (*ProjectLock, ProjectQueue) {
+func (q ProjectLockQueue) Dequeue() (*ProjectLock, ProjectLockQueue) {
 	if len(q) == 0 {
 		return nil, q
 	}
@@ -592,8 +592,8 @@ const (
 type EnqueueStatus struct {
 	// Status is the status of the enqueue operation
 	Status EnqueueStatusType
-	// ProjectLocksInFront tells how many PRs are in line before the current one
-	ProjectLocksInFront int
+	// QueueDepth tells how many PRs are in line before the current one
+	QueueDepth int
 }
 
 type DequeueStatus struct {

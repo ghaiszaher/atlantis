@@ -78,15 +78,9 @@ func (p *DefaultProjectLocker) TryLock(log logging.SimpleLogging, pull models.Pu
 		failureMsg := fmt.Sprintf("This project is currently locked by an unapplied plan from pull %s.", link)
 		switch lockAttempt.EnqueueStatus.Status {
 		case models.Enqueued:
-			failureMsg = fmt.Sprintf("%s This PR entered the waiting queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.ProjectLocksInFront)
+			failureMsg = fmt.Sprintf("%s This PR entered the waiting queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.QueueDepth)
 		case models.AlreadyInTheQueue:
-			failureMsg = fmt.Sprintf("%s This PR is already in the queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.ProjectLocksInFront)
-		default:
-			failureMsg = fmt.Sprintf(
-				"[%s] This project is currently locked by an unapplied plan from pull %s. To continue, delete the lock from %s or apply that plan and merge the pull request.\n\nOnce the lock is released, comment `atlantis plan` here to re-plan.",
-				"Fatal error, could not enqueue for some reason. Please check atlantis logs",
-				link,
-				link)
+			failureMsg = fmt.Sprintf("%s This PR is already in the queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.QueueDepth)
 		}
 		return &TryLockResponse{
 			LockAcquired:      false,
@@ -99,7 +93,7 @@ func (p *DefaultProjectLocker) TryLock(log logging.SimpleLogging, pull models.Pu
 		UnlockFn: func() error {
 			// TODO monikma #8 this will be called if there was a plan error and the lock was automatically dropped;
 			// Should we assure dequeuing of the next PR here too?
-			_, _, err := p.Locker.Unlock(lockAttempt.LockKey)
+			_, _, err := p.Locker.Unlock(lockAttempt.LockKey, false)
 			return err
 		},
 		LockKey: lockAttempt.LockKey,

@@ -17,7 +17,7 @@ func TestDeleteLock_LockerErr(t *testing.T) {
 	t.Log("If there is an error retrieving the lock, we return the error")
 	RegisterMockTestingT(t)
 	l := lockmocks.NewMockLocker()
-	When(l.Unlock("id")).ThenReturn(nil, nil, errors.New("err"))
+	When(l.Unlock("id", true)).ThenReturn(nil, nil, errors.New("err"))
 	dlc := events.DefaultDeleteLockCommand{
 		Locker: l,
 		Logger: logging.NewNoopLogger(t),
@@ -30,7 +30,7 @@ func TestDeleteLock_None(t *testing.T) {
 	t.Log("If there is no lock at that ID we return nil")
 	RegisterMockTestingT(t)
 	l := lockmocks.NewMockLocker()
-	When(l.Unlock("id")).ThenReturn(nil, nil, nil)
+	When(l.Unlock("id", true)).ThenReturn(nil, nil, nil)
 	dlc := events.DefaultDeleteLockCommand{
 		Locker: l,
 		Logger: logging.NewNoopLogger(t),
@@ -44,7 +44,7 @@ func TestDeleteLock_OldFormat(t *testing.T) {
 	t.Log("If the lock doesn't have BaseRepo set it is deleted successfully")
 	RegisterMockTestingT(t)
 	l := lockmocks.NewMockLocker()
-	When(l.Unlock("id")).ThenReturn(&models.ProjectLock{}, &models.ProjectLock{}, nil)
+	When(l.Unlock("id", true)).ThenReturn(&models.ProjectLock{}, &models.ProjectLock{}, nil)
 	dlc := events.DefaultDeleteLockCommand{
 		Locker: l,
 		Logger: logging.NewNoopLogger(t),
@@ -58,13 +58,13 @@ func TestDeleteLock_Success(t *testing.T) {
 	t.Log("Delete lock deletes successfully the working dir")
 	RegisterMockTestingT(t)
 	l := lockmocks.NewMockLocker()
-	When(l.Unlock("id")).ThenReturn(&models.ProjectLock{}, &models.ProjectLock{}, nil)
+	When(l.Unlock("id", true)).ThenReturn(&models.ProjectLock{}, &models.ProjectLock{}, nil)
 	workingDir := events.NewMockWorkingDir()
 	workingDirLocker := events.NewDefaultWorkingDirLocker()
 	pull := models.PullRequest{
 		BaseRepo: models.Repo{FullName: "owner/repo"},
 	}
-	When(l.Unlock("id")).ThenReturn(&models.ProjectLock{
+	When(l.Unlock("id", true)).ThenReturn(&models.ProjectLock{
 		Pull:      pull,
 		Workspace: "workspace",
 		Project: models.Project{

@@ -121,13 +121,13 @@ func TestSingleQueue(t *testing.T) {
 	Ok(t, err)
 	Equals(t, false, lockAcquired)
 	Equals(t, models.Enqueued, enqueueStatus.Status)
-	Equals(t, 1, enqueueStatus.ProjectLocksInFront)
+	Equals(t, 1, enqueueStatus.QueueDepth)
 
 	lockAcquired, _, enqueueStatus, err = r.TryLock(secondLock)
 	Ok(t, err)
 	Equals(t, false, lockAcquired)
 	Equals(t, models.AlreadyInTheQueue, enqueueStatus.Status)
-	Equals(t, 1, enqueueStatus.ProjectLocksInFront)
+	Equals(t, 1, enqueueStatus.QueueDepth)
 
 	thirdLock := lock
 	thirdLock.Pull.Num = pullNum + 2
@@ -135,7 +135,7 @@ func TestSingleQueue(t *testing.T) {
 	Ok(t, err)
 	Equals(t, false, lockAcquired)
 	Equals(t, models.Enqueued, enqueueStatus.Status)
-	Equals(t, 2, enqueueStatus.ProjectLocksInFront)
+	Equals(t, 2, enqueueStatus.QueueDepth)
 }
 
 func TestMultipleQueues(t *testing.T) {
@@ -158,7 +158,7 @@ func TestMultipleQueues(t *testing.T) {
 	lockAcquired, _, enqueueStatus, err := r.TryLock(secondLock)
 	Ok(t, err)
 	Equals(t, false, lockAcquired)
-	Equals(t, 1, enqueueStatus.ProjectLocksInFront)
+	Equals(t, 1, enqueueStatus.QueueDepth)
 }
 
 func TestLockCommandNotSet(t *testing.T) {
@@ -359,7 +359,7 @@ func TestLockingExistingLock(t *testing.T) {
 		acquired, _, enqueueStatus, err := rdb.TryLock(newLock)
 		Ok(t, err)
 		Equals(t, false, acquired)
-		Equals(t, 1, enqueueStatus.ProjectLocksInFront)
+		Equals(t, 1, enqueueStatus.QueueDepth)
 	}
 }
 

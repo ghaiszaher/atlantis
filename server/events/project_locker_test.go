@@ -95,10 +95,10 @@ func TestDefaultProjectLocker_TryLockWhenLockedSamePull(t *testing.T) {
 	Equals(t, true, res.LockAcquired)
 
 	// UnlockFn should work.
-	mockLocker.VerifyWasCalled(Never()).Unlock(lockKey)
+	mockLocker.VerifyWasCalled(Never()).Unlock(lockKey, false)
 	err = res.UnlockFn()
 	Ok(t, err)
-	mockLocker.VerifyWasCalledOnce().Unlock(lockKey)
+	mockLocker.VerifyWasCalledOnce().Unlock(lockKey, false)
 }
 
 func TestDefaultProjectLocker_TryLockUnlocked(t *testing.T) {
@@ -134,10 +134,10 @@ func TestDefaultProjectLocker_TryLockUnlocked(t *testing.T) {
 	Equals(t, true, res.LockAcquired)
 
 	// UnlockFn should work.
-	mockLocker.VerifyWasCalled(Never()).Unlock(lockKey)
+	mockLocker.VerifyWasCalled(Never()).Unlock(lockKey, false)
 	err = res.UnlockFn()
 	Ok(t, err)
-	mockLocker.VerifyWasCalledOnce().Unlock(lockKey)
+	mockLocker.VerifyWasCalledOnce().Unlock(lockKey, false)
 }
 
 func TestDefaultProjectLocker_RepoLocking(t *testing.T) {
