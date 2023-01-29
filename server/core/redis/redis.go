@@ -115,7 +115,10 @@ func (r *RedisDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock,
 
 		// Not in the queue, add it
 		newQueue := append(queue, newLock)
-		newQueueSerialized, _ := json.Marshal(newQueue)
+		newQueueSerialized, err := json.Marshal(newQueue)
+		if err != nil {
+			return false, currLock, enqueueStatus, errors.Wrap(err, "serializing")
+		}
 		err = r.client.Set(ctx, queueKey, newQueueSerialized, 0).Err()
 		if err != nil {
 			return false, currLock, enqueueStatus, errors.Wrap(err, "db transaction failed")
@@ -165,8 +168,11 @@ func (r *RedisDB) Unlock(project models.Project, workspace string, updateQueue b
 
 				// A lock was dequeued - update current lock holder
 				if dequeuedLock != nil {
-					dequeuedLockSerialized, _ := json.Marshal(*dequeuedLock)
-					err := r.client.Set(ctx, key, dequeuedLockSerialized, 0).Err()
+					dequeuedLockSerialized, err := json.Marshal(*dequeuedLock)
+					if err != nil {
+						return &lock, dequeuedLock, errors.Wrap(err, "serializing")
+					}
+					err = r.client.Set(ctx, key, dequeuedLockSerialized, 0).Err()
 					if err != nil {
 						return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
 					}
@@ -178,7 +184,10 @@ func (r *RedisDB) Unlock(project models.Project, workspace string, updateQueue b
 					return &lock, dequeuedLock, nil
 				}
 
-				newQueueSerialized, _ := json.Marshal(newQueue)
+				newQueueSerialized, err := json.Marshal(newQueue)
+				if err != nil {
+					return &lock, dequeuedLock, errors.Wrap(err, "serializing")
+				}
 				err = r.client.Set(ctx, queueKey, newQueueSerialized, 0).Err()
 				if err != nil {
 					return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
