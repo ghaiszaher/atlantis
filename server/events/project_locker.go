@@ -78,9 +78,9 @@ func (p *DefaultProjectLocker) TryLock(log logging.SimpleLogging, pull models.Pu
 		failureMsg := fmt.Sprintf("This project is currently locked by an unapplied plan from pull %s.", link)
 		switch lockAttempt.EnqueueStatus.Status {
 		case models.Enqueued:
-			failureMsg = fmt.Sprintf("%s This PR entered the waiting queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.ProjectLocksInFront)
+			failureMsg = fmt.Sprintf("%s This PR entered the waiting queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.QueueDepth)
 		case models.AlreadyInTheQueue:
-			failureMsg = fmt.Sprintf("%s This PR is already in the queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.ProjectLocksInFront)
+			failureMsg = fmt.Sprintf("%s This PR is already in the queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.QueueDepth)
 		}
 		return &TryLockResponse{
 			LockAcquired:      false,

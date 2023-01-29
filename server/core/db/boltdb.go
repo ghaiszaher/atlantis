@@ -134,8 +134,8 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 				return err
 			}
 			enqueueStatus = models.EnqueueStatus{
-				Status:              models.Enqueued,
-				ProjectLocksInFront: 1,
+				Status:     models.Enqueued,
+				QueueDepth: 1,
 			}
 			return nil
 		}
@@ -148,8 +148,8 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 		// Lock is already in the queue
 		if indexInQueue := currQueue.FindPullRequest(newLock.Pull.Num); indexInQueue > -1 {
 			enqueueStatus = models.EnqueueStatus{
-				Status:              models.AlreadyInTheQueue,
-				ProjectLocksInFront: indexInQueue + 1,
+				Status:     models.AlreadyInTheQueue,
+				QueueDepth: indexInQueue + 1,
 			}
 			return nil
 		}
@@ -160,8 +160,8 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 			return err
 		}
 		enqueueStatus = models.EnqueueStatus{
-			Status:              models.Enqueued,
-			ProjectLocksInFront: len(newQueue),
+			Status:     models.Enqueued,
+			QueueDepth: len(newQueue),
 		}
 
 		return nil

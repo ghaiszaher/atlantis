@@ -592,8 +592,8 @@ const (
 type EnqueueStatus struct {
 	// Status is the status of the enqueue operation
 	Status EnqueueStatusType
-	// ProjectLocksInFront tells how many PRs are in line before the current one
-	ProjectLocksInFront int
+	// QueueDepth tells how many PRs are in line before the current one
+	QueueDepth int
 }
 
 type DequeueStatus struct {

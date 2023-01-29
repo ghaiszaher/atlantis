@@ -107,8 +107,8 @@ func (r *RedisDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock,
 		// Lock is already in the queue
 		if indexInQueue := queue.FindPullRequest(newLock.Pull.Num); indexInQueue > -1 {
 			enqueueStatus = models.EnqueueStatus{
-				Status:              models.AlreadyInTheQueue,
-				ProjectLocksInFront: indexInQueue + 1,
+				Status:     models.AlreadyInTheQueue,
+				QueueDepth: indexInQueue + 1,
 			}
 			return false, currLock, enqueueStatus, nil
 		}
@@ -121,8 +121,8 @@ func (r *RedisDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock,
 			return false, currLock, enqueueStatus, errors.Wrap(err, "db transaction failed")
 		}
 		enqueueStatus = models.EnqueueStatus{
-			Status:              models.Enqueued,
-			ProjectLocksInFront: len(newQueue),
+			Status:     models.Enqueued,
+			QueueDepth: len(newQueue),
 		}
 		return false, currLock, enqueueStatus, nil
 	}
