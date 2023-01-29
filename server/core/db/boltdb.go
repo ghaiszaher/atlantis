@@ -177,7 +177,8 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 // Unlock attempts to unlock the project and workspace.
 // If there is no lock, then it will return a nil pointer.
 // If there is a lock, then it will delete it, and then return a pointer
-// to the deleted lock.
+// to the deleted lock. If updateQueue is true, it will also grant the
+// lock to the next PR in the queue, update the queue and return the dequeued lock.
 func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error) {
 	var lock models.ProjectLock
 	var dequeuedLock *models.ProjectLock
