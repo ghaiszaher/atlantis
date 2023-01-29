@@ -557,9 +557,9 @@ type WorkflowHookCommandContext struct {
 	HookID string
 }
 
-type ProjectQueue []ProjectLock
+type ProjectLockQueue []ProjectLock
 
-func (q ProjectQueue) FindPullRequest(pullRequestNumber int) int {
+func (q ProjectLockQueue) FindPullRequest(pullRequestNumber int) int {
 	for i := range q {
 		if q[i].Pull.Num == pullRequestNumber {
 			return i
@@ -570,7 +570,7 @@ func (q ProjectQueue) FindPullRequest(pullRequestNumber int) int {
 
 // Dequeue dequeues the next item and returns the dequeued lock and the new queue.
 // if the queue is empty, returns nil and the current queue
-func (q ProjectQueue) Dequeue() (*ProjectLock, ProjectQueue) {
+func (q ProjectLockQueue) Dequeue() (*ProjectLock, ProjectLockQueue) {
 	if len(q) == 0 {
 		return nil, q
 	}

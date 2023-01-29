@@ -128,7 +128,7 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 		currQueueSerialized := queueBucket.Get([]byte(key))
 		// Queue doesn't exist, create one
 		if currQueueSerialized == nil {
-			newQueue := models.ProjectQueue{newLock}
+			newQueue := models.ProjectLockQueue{newLock}
 			newQueueSerialized, _ := json.Marshal(newQueue)
 			if err := queueBucket.Put([]byte(key), newQueueSerialized); err != nil {
 				return err
@@ -140,7 +140,7 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 			return nil
 		}
 		// Queue exists
-		var currQueue models.ProjectQueue
+		var currQueue models.ProjectLockQueue
 		if err := json.Unmarshal(currQueueSerialized, &currQueue); err != nil {
 			return errors.Wrap(err, "failed to deserialize queue for current lock")
 		}
@@ -208,12 +208,12 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 			}
 
 			// Queue exists
-			var currQueue models.ProjectQueue
+			var currQueue models.ProjectLockQueue
 			if err := json.Unmarshal(currQueueSerialized, &currQueue); err != nil {
 				return errors.Wrap(err, "failed to deserialize queue for current lock")
 			}
 
-			var newQueue models.ProjectQueue
+			var newQueue models.ProjectLockQueue
 			dequeuedLock, newQueue = currQueue.Dequeue()
 
 			// A lock was dequeued - update current lock holder
@@ -271,8 +271,8 @@ func (b *BoltDB) List() ([]models.ProjectLock, error) {
 	return locks, nil
 }
 
-func (b *BoltDB) GetQueueByLock(project models.Project, workspace string) (models.ProjectQueue, error) {
-	var queue models.ProjectQueue
+func (b *BoltDB) GetQueueByLock(project models.Project, workspace string) (models.ProjectLockQueue, error) {
+	var queue models.ProjectLockQueue
 	err := b.db.View(func(tx *bolt.Tx) error {
 		// construct lock key
 		key := b.lockKey(project, workspace)
