@@ -103,9 +103,10 @@ func (c *Client) TryLock(p models.Project, workspace string, pull models.PullReq
 }
 
 // Unlock attempts to unlock a project and workspace. If successful,
-// a pointer to the now deleted lock will be returned. Else, that
-// pointer will be nil. An error will only be returned if there was
-// an error deleting the lock (i.e. not if there was no lock).
+// a pointer to the now deleted lock will be returned, as well as a pointer
+// to the next dequeued lock from the queue (if any). Else, both
+// pointers will be nil. An error will only be returned if there was
+// an error deleting the lock or dequeuing (i.e. not if there was no lock).
 func (c *Client) Unlock(key string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error) {
 	project, workspace, err := c.lockKeyToProjectWorkspace(key)
 	if err != nil {
