@@ -27,7 +27,7 @@ type DefaultDeleteLockCommand struct {
 func (l *DefaultDeleteLockCommand) DeleteLock(id string) (*models.ProjectLock, *models.ProjectLock, error) {
 	// TODO monikma extend the tests
 	// TODO monikma #9 When the lock(s) has(ve) been explicitly removed, also dequeue the next PR(s)
-	lock, dequeuedLock, err := l.Locker.Unlock(id)
+	lock, dequeuedLock, err := l.Locker.Unlock(id, true)
 	if err != nil {
 		return nil, nil, err
 	}

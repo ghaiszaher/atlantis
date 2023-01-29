@@ -69,7 +69,7 @@ type Client struct {
 
 type Locker interface {
 	TryLock(p models.Project, workspace string, pull models.PullRequest, user models.User) (TryLockResponse, error)
-	Unlock(key string) (*models.ProjectLock, *models.ProjectLock, error)
+	Unlock(key string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error)
 	List() (map[string]models.ProjectLock, error)
 	GetQueueByLock(project models.Project, workspace string) (models.ProjectLockQueue, error)
 	UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error)
@@ -106,12 +106,12 @@ func (c *Client) TryLock(p models.Project, workspace string, pull models.PullReq
 // a pointer to the now deleted lock will be returned. Else, that
 // pointer will be nil. An error will only be returned if there was
 // an error deleting the lock (i.e. not if there was no lock).
-func (c *Client) Unlock(key string) (*models.ProjectLock, *models.ProjectLock, error) {
+func (c *Client) Unlock(key string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error) {
 	project, workspace, err := c.lockKeyToProjectWorkspace(key)
 	if err != nil {
 		return nil, nil, err
 	}
-	return c.backend.Unlock(project, workspace, false)
+	return c.backend.Unlock(project, workspace, updateQueue)
 }
 
 // List returns a map of all locks with their lock key as the map key.
@@ -185,7 +185,7 @@ func (c *NoOpLocker) TryLock(p models.Project, workspace string, pull models.Pul
 // pointers to the now deleted lock and the next dequeued lock (optional) will be returned.
 // Else, both pointers will be nil. An error will only be returned if there was
 // an error deleting the lock (i.e. not if there was no lock).
-func (c *NoOpLocker) Unlock(key string) (*models.ProjectLock, *models.ProjectLock, error) {
+func (c *NoOpLocker) Unlock(key string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error) {
 	return &models.ProjectLock{}, &models.ProjectLock{}, nil
 }
 
