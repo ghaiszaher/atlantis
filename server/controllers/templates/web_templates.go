@@ -121,7 +121,6 @@ var IndexTemplate = template.Must(template.New("index.html.tmpl").Parse(`
   <br>
   <section>
     <p class="title-heading small"><strong>Locks</strong></p>
-
     {{ if .Locks }}
     {{ $basePath := .CleanedBasePath }}
     {{ range .Locks }}
