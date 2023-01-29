@@ -557,6 +557,28 @@ type WorkflowHookCommandContext struct {
 	HookID string
 }
 
+type ProjectQueue []ProjectLock
+
+func (q ProjectQueue) FindPullRequest(pullRequestNumber int) int {
+	for i := range q {
+		if q[i].Pull.Num == pullRequestNumber {
+			return i
+		}
+	}
+	return -1
+}
+
+// Dequeue dequeues the next item and returns the dequeued lock and the new queue.
+// if the queue is empty, returns nil and the current queue
+func (q ProjectQueue) Dequeue() (*ProjectLock, ProjectQueue) {
+	if len(q) == 0 {
+		return nil, q
+	}
+	dequeuedLock := &q[0]
+	newQueue := q[1:]
+	return dequeuedLock, newQueue
+}
+
 type EnqueueStatusType int
 
 const (

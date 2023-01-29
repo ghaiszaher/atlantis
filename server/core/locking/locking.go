@@ -36,7 +36,7 @@ type Backend interface {
 	GetLock(project models.Project, workspace string) (*models.ProjectLock, error)
 	UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error)
 
-	GetQueueByLock(project models.Project, workspace string) ([]models.ProjectLock, error)
+	GetQueueByLock(project models.Project, workspace string) (models.ProjectQueue, error)
 
 	UpdateProjectStatus(pull models.PullRequest, workspace string, repoRelDir string, newStatus models.ProjectPlanStatus) error
 	GetPullStatus(pull models.PullRequest) (*models.PullStatus, error)
@@ -71,7 +71,7 @@ type Locker interface {
 	TryLock(p models.Project, workspace string, pull models.PullRequest, user models.User) (TryLockResponse, error)
 	Unlock(key string) (*models.ProjectLock, *models.ProjectLock, error)
 	List() (map[string]models.ProjectLock, error)
-	GetQueueByLock(project models.Project, workspace string) ([]models.ProjectLock, error)
+	GetQueueByLock(project models.Project, workspace string) (models.ProjectQueue, error)
 	UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, models.DequeueStatus, error)
 	GetLock(key string) (*models.ProjectLock, error)
 }
@@ -128,7 +128,7 @@ func (c *Client) List() (map[string]models.ProjectLock, error) {
 	return m, nil
 }
 
-func (c *Client) GetQueueByLock(project models.Project, workspace string) ([]models.ProjectLock, error) {
+func (c *Client) GetQueueByLock(project models.Project, workspace string) (models.ProjectQueue, error) {
 	return c.backend.GetQueueByLock(project, workspace)
 }
 
@@ -196,8 +196,8 @@ func (c *NoOpLocker) List() (map[string]models.ProjectLock, error) {
 	return m, nil
 }
 
-func (c *NoOpLocker) GetQueueByLock(project models.Project, workspace string) ([]models.ProjectLock, error) {
-	m := make([]models.ProjectLock, 0)
+func (c *NoOpLocker) GetQueueByLock(project models.Project, workspace string) (models.ProjectQueue, error) {
+	m := make(models.ProjectQueue, 0)
 	return m, nil
 }
 
