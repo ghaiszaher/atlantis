@@ -45,17 +45,17 @@ func (mock *MockLocker) GetLock(_param0 string) (*models.ProjectLock, error) {
 	return ret0, ret1
 }
 
-func (mock *MockLocker) GetQueueByLock(_param0 models.Project, _param1 string) ([]models.ProjectLock, error) {
+func (mock *MockLocker) GetQueueByLock(_param0 models.Project, _param1 string) (models.ProjectQueue, error) {
 	if mock == nil {
 		panic("mock must not be nil. Use myMock := NewMockLocker().")
 	}
 	params := []pegomock.Param{_param0, _param1}
-	result := pegomock.GetGenericMockFrom(mock).Invoke("GetQueueByLock", params, []reflect.Type{reflect.TypeOf((*[]models.ProjectLock)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
-	var ret0 []models.ProjectLock
+	result := pegomock.GetGenericMockFrom(mock).Invoke("GetQueueByLock", params, []reflect.Type{reflect.TypeOf((*models.ProjectQueue)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
+	var ret0 models.ProjectQueue
 	var ret1 error
 	if len(result) != 0 {
 		if result[0] != nil {
-			ret0 = result[0].([]models.ProjectLock)
+			ret0 = result[0].(models.ProjectQueue)
 		}
 		if result[1] != nil {
 			ret1 = result[1].(error)

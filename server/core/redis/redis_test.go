@@ -79,6 +79,88 @@ func TestRedisWithTLS(t *testing.T) {
 	_ = newTestRedisTLS(s)
 }
 
+func TestGetQueueByLock(t *testing.T) {
+	t.Log("Getting Queue By Lock")
+	s := miniredis.RunT(t)
+	r := newTestRedis(s)
+
+	// queue doesn't exist -> should return nil
+	queue, err := r.GetQueueByLock(lock.Project, lock.Workspace)
+	Ok(t, err)
+	Assert(t, queue == nil, "exp nil")
+
+	_, _, _, err = r.TryLock(lock)
+	Ok(t, err)
+
+	lock1 := lock
+	lock1.Pull.Num = 2
+	_, _, _, err = r.TryLock(lock1) // this lock should be queued
+	Ok(t, err)
+
+	lock2 := lock
+	lock2.Pull.Num = 3
+	_, _, _, err = r.TryLock(lock2) // this lock should be queued
+	Ok(t, err)
+
+	queue, _ = r.GetQueueByLock(lock.Project, lock.Workspace)
+	Equals(t, 2, len(queue))
+}
+
+func TestSingleQueue(t *testing.T) {
+	t.Log("locking should return correct EnqueueStatus for a single queue")
+	s := miniredis.RunT(t)
+	r := newTestRedis(s)
+
+	lockAcquired, _, _, err := r.TryLock(lock)
+	Ok(t, err)
+	Equals(t, true, lockAcquired)
+
+	secondLock := lock
+	secondLock.Pull.Num = pullNum + 1
+	lockAcquired, _, enqueueStatus, err := r.TryLock(secondLock)
+	Ok(t, err)
+	Equals(t, false, lockAcquired)
+	Equals(t, models.Enqueued, enqueueStatus.Status)
+	Equals(t, 1, enqueueStatus.ProjectLocksInFront)
+
+	lockAcquired, _, enqueueStatus, err = r.TryLock(secondLock)
+	Ok(t, err)
+	Equals(t, false, lockAcquired)
+	Equals(t, models.AlreadyInTheQueue, enqueueStatus.Status)
+	Equals(t, 1, enqueueStatus.ProjectLocksInFront)
+
+	thirdLock := lock
+	thirdLock.Pull.Num = pullNum + 2
+	lockAcquired, _, enqueueStatus, err = r.TryLock(thirdLock)
+	Ok(t, err)
+	Equals(t, false, lockAcquired)
+	Equals(t, models.Enqueued, enqueueStatus.Status)
+	Equals(t, 2, enqueueStatus.ProjectLocksInFront)
+}
+
+func TestMultipleQueues(t *testing.T) {
+	t.Log("locking should return correct EnqueueStatus for multiple queues")
+	s := miniredis.RunT(t)
+	r := newTestRedis(s)
+
+	lockAcquired, _, _, err := r.TryLock(lock)
+	Ok(t, err)
+	Equals(t, true, lockAcquired)
+
+	lockInDifferentWorkspace := lock
+	lockInDifferentWorkspace.Workspace = "different-workspace"
+	lockAcquired, _, _, err = r.TryLock(lockInDifferentWorkspace)
+	Ok(t, err)
+	Equals(t, true, lockAcquired)
+
+	secondLock := lock
+	secondLock.Pull.Num = pullNum + 1
+	lockAcquired, _, enqueueStatus, err := r.TryLock(secondLock)
+	Ok(t, err)
+	Equals(t, false, lockAcquired)
+	Equals(t, 1, enqueueStatus.ProjectLocksInFront)
+}
+
 func TestLockCommandNotSet(t *testing.T) {
 	t.Log("retrieving apply lock when there are none should return empty LockCommand")
 	s := miniredis.RunT(t)
@@ -270,14 +352,14 @@ func TestLockingExistingLock(t *testing.T) {
 		Equals(t, newLock, currLock)
 	}
 
-	t.Log("...not succeed if the new project only has a different pullNum")
+	t.Log("...succeed if the new project has a different pullNum, the locking attempt will be queued")
 	{
 		newLock := lock
 		newLock.Pull.Num = lock.Pull.Num + 1
-		acquired, currLock, _, err := rdb.TryLock(newLock)
+		acquired, _, enqueueStatus, err := rdb.TryLock(newLock)
 		Ok(t, err)
 		Equals(t, false, acquired)
-		Equals(t, currLock.Pull.Num, pullNum)
+		Equals(t, 1, enqueueStatus.ProjectLocksInFront)
 	}
 }
 
@@ -439,6 +521,105 @@ func TestUnlockByPullMatching(t *testing.T) {
 	ls, err = rdb.List()
 	Ok(t, err)
 	Equals(t, 0, len(ls))
+}
+
+func TestDequeueAfterUnlock(t *testing.T) {
+	t.Log("unlocking should dequeue and grant lock to the next ProjectLock")
+	s := miniredis.RunT(t)
+	r := newTestRedis(s)
+
+	// first lock acquired
+	_, _, _, err := r.TryLock(lock)
+	Ok(t, err)
+
+	// second lock enqueued
+	new := lock
+	new.Pull.Num = pullNum + 1
+	_, _, _, err = r.TryLock(new)
+	Ok(t, err)
+
+	// third lock enqueued
+	new2 := lock
+	new2.Pull.Num = pullNum + 2
+	_, _, _, err = r.TryLock(new2)
+	Ok(t, err)
+	queue, err := r.GetQueueByLock(lock.Project, lock.Workspace)
+	Ok(t, err)
+	Equals(t, 2, len(queue))
+	Equals(t, new.Pull, queue[0].Pull)
+	Equals(t, new2.Pull, queue[1].Pull)
+
+	// first lock unlocked -> second lock dequeued and lock acquired
+	_, dequeuedLock, err := r.Unlock(lock.Project, lock.Workspace, true)
+	Ok(t, err)
+	queue, err = r.GetQueueByLock(lock.Project, lock.Workspace)
+	Ok(t, err)
+	Equals(t, new, *dequeuedLock)
+	Equals(t, 1, len(queue))
+	Equals(t, new2.Pull, queue[0].Pull)
+
+	// second lock unlocked without touching the queue
+	_, dequeuedLock, err = r.Unlock(new.Project, new.Workspace, false)
+	Ok(t, err)
+	Assert(t, dequeuedLock == nil, "exp nil")
+	queue, err = r.GetQueueByLock(lock.Project, lock.Workspace)
+	Ok(t, err)
+	Equals(t, 1, len(queue))
+	Equals(t, new2.Pull, queue[0].Pull)
+
+	l, err := r.GetLock(project, workspace)
+	Ok(t, err)
+	Assert(t, l == nil, "exp nil")
+
+	// bring the second lock again
+	_, _, _, err = r.TryLock(new)
+	Ok(t, err)
+
+	// second lock unlocked -> third lock dequeued and lock acquired
+	_, dequeuedLock, err = r.Unlock(new.Project, new.Workspace, true)
+	Ok(t, err)
+	Equals(t, new2, *dequeuedLock)
+
+	// Queue is deleted when empty
+	queue, err = r.GetQueueByLock(new2.Project, new2.Workspace)
+	Ok(t, err)
+	Assert(t, queue == nil, "exp nil")
+
+	// third lock unlocked -> no more locks in the queue
+	_, dequeuedLock, err = r.Unlock(new2.Project, new2.Workspace, true)
+	Ok(t, err)
+	Equals(t, (*models.ProjectLock)(nil), dequeuedLock)
+
+}
+
+func TestDequeueAfterUnlockByPull(t *testing.T) {
+	t.Log("unlocking by pull should dequeue and grant lock to all dequeued ProjectLocks")
+	s := miniredis.RunT(t)
+	r := newTestRedis(s)
+
+	_, _, _, err := r.TryLock(lock)
+	Ok(t, err)
+
+	lock2 := lock
+	lock2.Workspace = "different-workspace"
+	_, _, _, err = r.TryLock(lock2)
+	Ok(t, err)
+
+	lock3 := lock
+	lock3.Pull.Num = pullNum + 1
+	_, _, _, err = r.TryLock(lock3)
+	Ok(t, err)
+
+	lock4 := lock
+	lock4.Workspace = "different-workspace"
+	lock4.Pull.Num = pullNum + 1
+	_, _, _, err = r.TryLock(lock4)
+	Ok(t, err)
+
+	_, dequeueStatus, err := r.UnlockByPull(project.RepoFullName, pullNum, true)
+	Ok(t, err)
+
+	Equals(t, 2, len(dequeueStatus.ProjectLocks))
 }
 
 func TestGetLockNotThere(t *testing.T) {

@@ -470,3 +470,42 @@ func TestPullStatus_StatusCount(t *testing.T) {
 	Equals(t, 1, ps.StatusCount(models.ErroredPolicyCheckStatus))
 	Equals(t, 1, ps.StatusCount(models.PassedPolicyCheckStatus))
 }
+
+func TestProjectQueue_FindPullRequest(t *testing.T) {
+	queue := models.ProjectQueue{
+		{Pull: models.PullRequest{Num: 15}},
+		{Pull: models.PullRequest{Num: 16}},
+		{Pull: models.PullRequest{Num: 17}},
+	}
+	Equals(t, 0, queue.FindPullRequest(15))
+	Equals(t, 1, queue.FindPullRequest(16))
+	Equals(t, 2, queue.FindPullRequest(17))
+	Equals(t, -1, queue.FindPullRequest(20))
+
+	emptyQueue := models.ProjectQueue{}
+	Equals(t, -1, emptyQueue.FindPullRequest(15))
+}
+
+func TestProjectQueue_Dequeue(t *testing.T) {
+	queue := models.ProjectQueue{
+		{Pull: models.PullRequest{Num: 15}},
+		{Pull: models.PullRequest{Num: 16}},
+		{Pull: models.PullRequest{Num: 17}},
+	}
+
+	dequeuedLock, newQueue := queue.Dequeue()
+	Equals(t, 15, dequeuedLock.Pull.Num)
+	Equals(t, 2, len(newQueue))
+
+	dequeuedLock, newQueue = newQueue.Dequeue()
+	Equals(t, 16, dequeuedLock.Pull.Num)
+	Equals(t, 1, len(newQueue))
+
+	dequeuedLock, newQueue = newQueue.Dequeue()
+	Equals(t, 17, dequeuedLock.Pull.Num)
+	Equals(t, 0, len(newQueue))
+
+	dequeuedLock, newQueue = newQueue.Dequeue()
+	Assert(t, dequeuedLock == nil, "dequeued lock was not nil")
+	Equals(t, 0, len(newQueue))
+}

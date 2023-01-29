@@ -128,10 +128,10 @@ var IndexTemplate = template.Must(template.New("index.html.tmpl").Parse(`
       <a href="{{ $basePath }}{{.LockPath}}">
         <div class="twelve columns button content lock-row">
         <div class="list-title">{{.RepoFullName}} <span class="heading-font-size">#{{.PullNum}}</span> <code>{{.Path}}</code> <code>{{.Workspace}}</code></div>
-        <div class="list-status"><code>Locked</code></div>
+		{{ if .Queue }}
 		<div class="list-title" style="margin-left:10px">
 			Queue: [
-			{{ range .Queue}}
+			{{ range .Queue }}
 				<a title=
 "Author: {{.Author}}
 Url: {{.PullURL}}
@@ -143,6 +143,7 @@ Time: {{.TimeFormatted}}"
 			{{ end }}
 			]
 		</div>
+		{{ end }}
 		<div class="list-status"><code>Locked</code></div>
         <div class="list-timestamp"><span class="heading-font-size">{{.TimeFormatted}}</span></div>
         </div>
@@ -310,29 +311,22 @@ var LockTemplate = template.Must(template.New("lock.html.tmpl").Parse(`
         <h6><code>Pull Request Link</code>: <a href="{{.PullRequestLink}}" target="_blank"><strong>{{.PullRequestLink}}</strong></a></h6>
         <h6><code>Locked By</code>: <strong>{{.LockedBy}}</strong></h6>
         <h6><code>Workspace</code>: <strong>{{.Workspace}}</strong></h6>
+		{{ if .Queue }}
 		<h6><code>Queue</code>:
 			<ol>
-				{{ range .Queue}}
-				<li>
-					<div class="queue-item">
-						<code>Url</code>: <a href="{{.PullURL}}">{{.PullURL}}</a>
+				{{ range .Queue }}
+				<li class="queue-item">
+					<div class="queue-item-details">
+						<code>Url</code>: <a href="{{.PullURL}}"><strong>{{.PullURL}}</strong></a>
 						</br>
-						<code>Author</code>: {{.Author}}
+						<code>Author</code>: <strong>{{.Author}}</strong>
 						</br>
-						<code>Pull Req No.</code>: #{{.PullNum}}
-						</br>
-						<code>Time:</code>: {{.TimeFormatted}}"
-						</br>
-						<code>Repository</code>: {{.RepoFullName}}
-						</br>						
-						<code>Path</code>: {{.Path}}
-						</br>
-						<code>Workspace</code>:  {{.Workspace}}
+						<code>Time</code>: <strong>{{.TimeFormatted}}</strong>
 					</div>
 				</li>
-
 			{{ end }}
 			</ol>
+		{{ end }}
         <br>
       </div>
       <div class="four columns">

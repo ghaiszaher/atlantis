@@ -50,7 +50,12 @@ func TestGetQueueByLock(t *testing.T) {
 	db, b := newTestDB()
 	defer cleanupDB(db)
 
-	_, _, _, err := b.TryLock(lock)
+	// queue doesn't exist -> should return nil
+	queue, err := b.GetQueueByLock(lock.Project, lock.Workspace)
+	Ok(t, err)
+	Assert(t, queue == nil, "exp nil")
+
+	_, _, _, err = b.TryLock(lock)
 	Ok(t, err)
 
 	lock1 := lock
@@ -63,7 +68,7 @@ func TestGetQueueByLock(t *testing.T) {
 	_, _, _, err = b.TryLock(lock2) // this lock should be queued
 	Ok(t, err)
 
-	queue, _ := b.GetQueueByLock(lock.Project, lock.Workspace)
+	queue, _ = b.GetQueueByLock(lock.Project, lock.Workspace)
 	Equals(t, 2, len(queue))
 }
 
@@ -539,6 +544,11 @@ func TestDequeueAfterUnlock(t *testing.T) {
 	_, dequeuedLock, err = b.Unlock(new.Project, new.Workspace, true)
 	Ok(t, err)
 	Equals(t, new2, *dequeuedLock)
+
+	// Queue is deleted when empty
+	queue, err = b.GetQueueByLock(new2.Project, new2.Workspace)
+	Ok(t, err)
+	Assert(t, queue == nil, "exp nil")
 
 	// third lock unlocked -> no more locks in the queue
 	_, dequeuedLock, err = b.Unlock(new2.Project, new2.Workspace, true)
