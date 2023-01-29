@@ -88,7 +88,7 @@ func NewWithDB(db *bolt.DB, bucket string, globalBucket string) (*BoltDB, error)
 }
 
 // TryLock attempts to create a new lock. If the lock is
-// acquired, it will return true, the lock returned which will be newLock.
+// acquired, it will return true and the lock returned will be newLock.
 // If the lock is not acquired, it will return false, the current
 // lock that is preventing this lock from being acquired, and the enqueue status.
 func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, models.EnqueueStatus, error) {
@@ -129,7 +129,10 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 		// Queue doesn't exist, create one
 		if currQueueSerialized == nil {
 			newQueue := models.ProjectLockQueue{newLock}
-			newQueueSerialized, _ := json.Marshal(newQueue)
+			newQueueSerialized, err := json.Marshal(newQueue)
+			if err != nil {
+				return errors.Wrap(err, "serializing")
+			}
 			if err := queueBucket.Put([]byte(key), newQueueSerialized); err != nil {
 				return err
 			}
@@ -155,7 +158,10 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 		}
 		// Not in the queue, add it
 		newQueue := append(currQueue, newLock)
-		newQueueSerialized, _ := json.Marshal(newQueue)
+		newQueueSerialized, err := json.Marshal(newQueue)
+		if err != nil {
+			return err
+		}
 		if err := queueBucket.Put([]byte(key), newQueueSerialized); err != nil {
 			return err
 		}
@@ -219,7 +225,10 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 
 			// A lock was dequeued - update current lock holder
 			if dequeuedLock != nil {
-				dequeuedLockSerialized, _ := json.Marshal(*dequeuedLock)
+				dequeuedLockSerialized, err := json.Marshal(*dequeuedLock)
+				if err != nil {
+					return errors.Wrap(err, "serializing")
+				}
 				if err := bucket.Put([]byte(key), dequeuedLockSerialized); err != nil {
 					return errors.Wrap(err, "failed to give the lock to next PR in the queue")
 				}
@@ -230,7 +239,10 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 				return queueBucket.Delete([]byte(key))
 			}
 
-			newQueueSerialized, _ := json.Marshal(newQueue)
+			newQueueSerialized, err := json.Marshal(newQueue)
+			if err != nil {
+				return errors.Wrap(err, "serializing")
+			}
 			return queueBucket.Put([]byte(key), newQueueSerialized)
 
 		}
