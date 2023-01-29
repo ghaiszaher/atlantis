@@ -278,6 +278,9 @@ func (b *BoltDB) GetQueueByLock(project models.Project, workspace string) (model
 		key := b.lockKey(project, workspace)
 		queueBucket := tx.Bucket(b.queueBucketName)
 		currQueueSerialized := queueBucket.Get([]byte(key))
+		if currQueueSerialized == nil {
+			return nil
+		}
 		if err := json.Unmarshal(currQueueSerialized, &queue); err != nil {
 			return errors.Wrapf(err, "failed to deserialize queue for lock %q", queue)
 		}
