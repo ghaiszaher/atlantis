@@ -111,7 +111,7 @@ func (c *Client) Unlock(key string) (*models.ProjectLock, *models.ProjectLock, e
 	if err != nil {
 		return nil, nil, err
 	}
-	return c.backend.Unlock(project, workspace, false) // TODO Monika
+	return c.backend.Unlock(project, workspace, false)
 }
 
 // List returns a map of all locks with their lock key as the map key.
