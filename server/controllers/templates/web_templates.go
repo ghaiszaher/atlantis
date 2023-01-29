@@ -122,29 +122,29 @@ var IndexTemplate = template.Must(template.New("index.html.tmpl").Parse(`
   <section>
     <p class="title-heading small"><strong>Locks</strong></p>
 
-	{{ if .Locks }}
+    {{ if .Locks }}
     {{ $basePath := .CleanedBasePath }}
     {{ range .Locks }}
       <a href="{{ $basePath }}{{.LockPath}}">
         <div class="twelve columns button content lock-row">
         <div class="list-title">{{.RepoFullName}} <span class="heading-font-size">#{{.PullNum}}</span> <code>{{.Path}}</code> <code>{{.Workspace}}</code></div>
-		{{ if .Queue }}
-		<div class="list-title" style="margin-left:10px">
-			Queue: [
-			{{ range .Queue }}
-				<a title=
+        {{ if .Queue }}
+        <div class="list-title" style="margin-left:10px">
+            Queue: [
+            {{ range .Queue }}
+                <a title=
 "Author: {{.Author}}
 Url: {{.PullURL}}
 Pull Req No.: #{{.PullNum}}
 Time: {{.TimeFormatted}}"
-					href="{{.PullURL}}">
-					#{{.PullNum}}
-				</a>
-			{{ end }}
-			]
-		</div>
-		{{ end }}
-		<div class="list-status"><code>Locked</code></div>
+                    href="{{.PullURL}}">
+                    #{{.PullNum}}
+                </a>
+            {{ end }}
+            ]
+        </div>
+        {{ end }}
+        <div class="list-status"><code>Locked</code></div>
         <div class="list-timestamp"><span class="heading-font-size">{{.TimeFormatted}}</span></div>
         </div>
       </a>
@@ -311,22 +311,22 @@ var LockTemplate = template.Must(template.New("lock.html.tmpl").Parse(`
         <h6><code>Pull Request Link</code>: <a href="{{.PullRequestLink}}" target="_blank"><strong>{{.PullRequestLink}}</strong></a></h6>
         <h6><code>Locked By</code>: <strong>{{.LockedBy}}</strong></h6>
         <h6><code>Workspace</code>: <strong>{{.Workspace}}</strong></h6>
-		{{ if .Queue }}
-		<h6><code>Queue</code>:
-			<ol>
-				{{ range .Queue }}
-				<li class="queue-item">
-					<div class="queue-item-details">
-						<code>Url</code>: <a href="{{.PullURL}}"><strong>{{.PullURL}}</strong></a>
-						</br>
-						<code>Author</code>: <strong>{{.Author}}</strong>
-						</br>
-						<code>Time</code>: <strong>{{.TimeFormatted}}</strong>
-					</div>
-				</li>
-			{{ end }}
-			</ol>
-		{{ end }}
+        {{ if .Queue }}
+        <h6><code>Queue</code>:
+            <ol>
+                {{ range .Queue }}
+                <li class="queue-item">
+                    <div class="queue-item-details">
+                        <code>Url</code>: <a href="{{.PullURL}}"><strong>{{.PullURL}}</strong></a>
+                        </br>
+                        <code>Author</code>: <strong>{{.Author}}</strong>
+                        </br>
+                        <code>Time</code>: <strong>{{.TimeFormatted}}</strong>
+                    </div>
+                </li>
+            {{ end }}
+            </ol>
+        {{ end }}
         <br>
       </div>
       <div class="four columns">
