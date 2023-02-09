@@ -4,7 +4,7 @@ ARG ATLANTIS_BASE_TAG_TYPE=alpine
 
 # Stage 1: build artifact
 
-FROM golang:1.19.5-alpine AS builder
+FROM golang:1.20.0-alpine AS builder
 
 ARG ATLANTIS_VERSION=dev
 ENV ATLANTIS_VERSION=${ATLANTIS_VERSION}
@@ -14,6 +14,13 @@ ARG ATLANTIS_DATE=unknown
 ENV ATLANTIS_DATE=${ATLANTIS_DATE}
 
 WORKDIR /app
+
+# This is needed to download transitive dependencies instead of compiling them
+# https://github.com/montanaflynn/golang-docker-cache
+# https://github.com/golang/go/issues/27719
+COPY go.mod go.sum ./
+RUN go mod graph | awk '{if ($1 !~ "@") print $2}' | xargs go get
+
 COPY . /app
 
 RUN --mount=type=cache,target=/go/pkg/mod \
