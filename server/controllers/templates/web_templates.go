@@ -180,7 +180,7 @@ Time: {{.TimeFormatted}}"
   </div>
 </div>
 <footer>
-v{{ .AtlantisVersion }}
+{{ .AtlantisVersion }}
 </footer>
 <script>
 
