@@ -433,13 +433,13 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	switch dbtype := userConfig.LockingDBType; dbtype {
 	case "redis":
 		logger.Info("Utilizing Redis DB")
-		backend, err = redis.New(userConfig.RedisHost, userConfig.RedisPort, userConfig.RedisPassword, userConfig.RedisTLSEnabled, userConfig.RedisInsecureSkipVerify, userConfig.RedisDB)
+		backend, err = redis.New(userConfig.RedisHost, userConfig.RedisPort, userConfig.RedisPassword, userConfig.RedisTLSEnabled, userConfig.RedisInsecureSkipVerify, userConfig.RedisDB, userConfig.QueueEnabled)
 		if err != nil {
 			return nil, err
 		}
 	case "boltdb":
 		logger.Info("Utilizing BoltDB")
-		backend, err = db.New(userConfig.DataDir)
+		backend, err = db.New(userConfig.DataDir, userConfig.QueueEnabled)
 		if err != nil {
 			return nil, err
 		}

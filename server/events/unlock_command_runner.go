@@ -51,7 +51,9 @@ func (u *UnlockCommandRunner) Run(
 		ctx.Log.Err("unable to comment on PR %s: %s", pullNum, commentErr)
 	}
 
-	u.commentOnDequeuedPullRequests(ctx, dequeueStatus)
+	if dequeueStatus != nil {
+		u.commentOnDequeuedPullRequests(ctx, *dequeueStatus)
+	}
 }
 
 func (u *UnlockCommandRunner) commentOnDequeuedPullRequests(ctx *command.Context, dequeueStatus models.DequeueStatus) {

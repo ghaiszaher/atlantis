@@ -48,7 +48,7 @@ func (mock *MockDeleteLockCommand) DeleteLock(_param0 string) (*models.ProjectLo
 	return ret0, ret1, ret2
 }
 
-func (mock *MockDeleteLockCommand) DeleteLocksByPull(_param0 string, _param1 int) (int, models.DequeueStatus, error) {
+func (mock *MockDeleteLockCommand) DeleteLocksByPull(repoFullName string, pullNum int) (int, *models.DequeueStatus, error) {
 	if mock == nil {
 		panic("mock must not be nil. Use myMock := NewMockDeleteLockCommand().")
 	}

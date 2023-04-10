@@ -130,9 +130,11 @@ func (p *PullClosedExecutor) CleanUpPull(repo models.Repo, pull models.PullReque
 		return err
 	}
 
-	var commentErr = p.commentOnDequeuedPullRequests(dequeueStatus)
+	if dequeueStatus != nil {
+		return p.commentOnDequeuedPullRequests(*dequeueStatus)
+	}
 
-	return commentErr
+	return nil
 }
 
 func (p *PullClosedExecutor) commentOnDequeuedPullRequests(dequeueStatus models.DequeueStatus) error {
