@@ -177,14 +177,10 @@ func TestApplyCommandRunner_IsSilenced(t *testing.T) {
 
 			When(projectCommandBuilder.BuildApplyCommands(ctx, cmd)).Then(func(args []Param) ReturnValues {
 				if c.Matched {
-					return ReturnValues{
-						[]command.ProjectContext{
-							{
-								CommandName:       command.Apply,
-								ProjectPlanStatus: models.PlannedPlanStatus,
-							},
-						}, nil,
-					}
+					return ReturnValues{[]command.ProjectContext{{
+						CommandName:       command.Apply,
+						ProjectPlanStatus: models.PlannedPlanStatus,
+					}}, nil}
 				}
 				return ReturnValues{[]command.ProjectContext{}, nil}
 			})

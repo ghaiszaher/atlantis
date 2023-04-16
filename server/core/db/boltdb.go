@@ -129,7 +129,7 @@ func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, 
 		if b.queueEnabled {
 			var err error
 			if enqueueStatus, err = b.enqueue(tx, key, newLock); err != nil {
-				return err
+				return errors.Wrap(err, "")
 			}
 		}
 
@@ -151,10 +151,10 @@ func (b *BoltDB) enqueue(tx *bolt.Tx, key string, newLock models.ProjectLock) (*
 		newQueue := models.ProjectLockQueue{newLock}
 		newQueueSerialized, err := json.Marshal(newQueue)
 		if err != nil {
-			return nil, errors.Wrap(err, "serializing")
+			return nil, errors.Wrap(err, "failed to serialize queue")
 		}
 		if err := queueBucket.Put([]byte(key), newQueueSerialized); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to put queue with key %s", key)
 		}
 		return &models.EnqueueStatus{
 			Status:     models.Enqueued,
@@ -178,10 +178,10 @@ func (b *BoltDB) enqueue(tx *bolt.Tx, key string, newLock models.ProjectLock) (*
 	newQueue := append(currQueue, newLock)
 	newQueueSerialized, err := json.Marshal(newQueue)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to serialize queue")
 	}
 	if err := queueBucket.Put([]byte(key), newQueueSerialized); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to put queue with key %s", key)
 	}
 	return &models.EnqueueStatus{
 		Status:     models.Enqueued,
@@ -314,7 +314,7 @@ func (b *BoltDB) GetQueueByLock(project models.Project, workspace string) (model
 	if err != nil {
 		return queue, errors.Wrap(err, "DB transaction failed while fetching Queue")
 	}
-	return queue, err
+	return queue, nil
 }
 
 // LockCommand attempts to create a new lock for a CommandName.
