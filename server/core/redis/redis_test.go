@@ -82,7 +82,7 @@ func TestRedisWithTLS(t *testing.T) {
 func TestGetQueueByLock(t *testing.T) {
 	t.Log("Getting Queue By Lock")
 	s := miniredis.RunT(t)
-	r := newTestRedis(s)
+	r := newTestRedisQueue(s)
 
 	// queue doesn't exist -> should return nil
 	queue, err := r.GetQueueByLock(lock.Project, lock.Workspace)
@@ -109,7 +109,7 @@ func TestGetQueueByLock(t *testing.T) {
 func TestSingleQueue(t *testing.T) {
 	t.Log("locking should return correct EnqueueStatus for a single queue")
 	s := miniredis.RunT(t)
-	r := newTestRedis(s)
+	r := newTestRedisQueue(s)
 
 	lockAcquired, _, _, err := r.TryLock(lock)
 	Ok(t, err)
@@ -141,7 +141,7 @@ func TestSingleQueue(t *testing.T) {
 func TestMultipleQueues(t *testing.T) {
 	t.Log("locking should return correct EnqueueStatus for multiple queues")
 	s := miniredis.RunT(t)
-	r := newTestRedis(s)
+	r := newTestRedisQueue(s)
 
 	lockAcquired, _, _, err := r.TryLock(lock)
 	Ok(t, err)
@@ -318,7 +318,7 @@ func TestLockingNoLocks(t *testing.T) {
 func TestLockingExistingLock(t *testing.T) {
 	t.Log("if there is an existing lock, lock should...")
 	s := miniredis.RunT(t)
-	rdb := newTestRedis(s)
+	rdb := newTestRedisQueue(s)
 	_, _, _, err := rdb.TryLock(lock)
 	Ok(t, err)
 
@@ -526,7 +526,7 @@ func TestUnlockByPullMatching(t *testing.T) {
 func TestDequeueAfterUnlock(t *testing.T) {
 	t.Log("unlocking should dequeue and grant lock to the next ProjectLock")
 	s := miniredis.RunT(t)
-	r := newTestRedis(s)
+	r := newTestRedisQueue(s)
 
 	// first lock acquired
 	_, _, _, err := r.TryLock(lock)
@@ -595,7 +595,7 @@ func TestDequeueAfterUnlock(t *testing.T) {
 func TestDequeueAfterUnlockByPull(t *testing.T) {
 	t.Log("unlocking by pull should dequeue and grant lock to all dequeued ProjectLocks")
 	s := miniredis.RunT(t)
-	r := newTestRedis(s)
+	r := newTestRedisQueue(s)
 
 	_, _, _, err := r.TryLock(lock)
 	Ok(t, err)
@@ -984,7 +984,7 @@ func TestPullStatus_UpdateMerge(t *testing.T) {
 }
 
 func newTestRedis(mr *miniredis.Miniredis) *redis.RedisDB {
-	r, err := redis.New(mr.Host(), mr.Server().Addr().Port, "", false, false, 0)
+	r, err := redis.New(mr.Host(), mr.Server().Addr().Port, "", false, false, 0, false)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to create test redis client"))
 	}
@@ -992,7 +992,15 @@ func newTestRedis(mr *miniredis.Miniredis) *redis.RedisDB {
 }
 
 func newTestRedisTLS(mr *miniredis.Miniredis) *redis.RedisDB {
-	r, err := redis.New(mr.Host(), mr.Server().Addr().Port, "", true, true, 0)
+	r, err := redis.New(mr.Host(), mr.Server().Addr().Port, "", true, true, 0, false)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to create test redis client"))
+	}
+	return r
+}
+
+func newTestRedisQueue(mr *miniredis.Miniredis) *redis.RedisDB {
+	r, err := redis.New(mr.Host(), mr.Server().Addr().Port, "", false, false, 0, true)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to create test redis client"))
 	}

@@ -11,7 +11,7 @@ import (
 // DeleteLockCommand is the first step after a command request has been parsed.
 type DeleteLockCommand interface {
 	DeleteLock(id string) (*models.ProjectLock, *models.ProjectLock, error)
-	DeleteLocksByPull(repoFullName string, pullNum int) (int, models.DequeueStatus, error)
+	DeleteLocksByPull(repoFullName string, pullNum int) (int, *models.DequeueStatus, error)
 }
 
 // DefaultDeleteLockCommand deletes a specific lock after a request from the LocksController.
@@ -25,8 +25,8 @@ type DefaultDeleteLockCommand struct {
 
 // DeleteLock handles deleting the lock at id
 func (l *DefaultDeleteLockCommand) DeleteLock(id string) (*models.ProjectLock, *models.ProjectLock, error) {
-	// TODO monikma extend the tests
-	// TODO monikma #9 When the lock(s) has(ve) been explicitly removed, also dequeue the next PR(s)
+	// TODO(Ghais) extend the tests
+	// TODO(Ghais) #9 When the lock(s) has(ve) been explicitly removed, also dequeue the next PR(s)
 	lock, dequeuedLock, err := l.Locker.Unlock(id, true)
 	if err != nil {
 		return nil, nil, err
@@ -40,7 +40,7 @@ func (l *DefaultDeleteLockCommand) DeleteLock(id string) (*models.ProjectLock, *
 }
 
 // DeleteLocksByPull handles deleting all locks for the pull request
-func (l *DefaultDeleteLockCommand) DeleteLocksByPull(repoFullName string, pullNum int) (int, models.DequeueStatus, error) {
+func (l *DefaultDeleteLockCommand) DeleteLocksByPull(repoFullName string, pullNum int) (int, *models.DequeueStatus, error) {
 	locks, dequeueStatus, err := l.Locker.UnlockByPull(repoFullName, pullNum, true)
 	numLocks := len(locks)
 	if err != nil {

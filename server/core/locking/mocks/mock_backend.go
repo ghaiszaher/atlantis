@@ -155,15 +155,15 @@ func (mock *MockBackend) LockCommand(_param0 command.Name, _param1 time.Time) (*
 	return ret0, ret1
 }
 
-func (mock *MockBackend) TryLock(_param0 models.ProjectLock) (bool, models.ProjectLock, models.EnqueueStatus, error) {
+func (mock *MockBackend) TryLock(_param0 models.ProjectLock) (bool, models.ProjectLock, *models.EnqueueStatus, error) {
 	if mock == nil {
 		panic("mock must not be nil. Use myMock := NewMockBackend().")
 	}
 	params := []pegomock.Param{_param0}
-	result := pegomock.GetGenericMockFrom(mock).Invoke("TryLock", params, []reflect.Type{reflect.TypeOf((*bool)(nil)).Elem(), reflect.TypeOf((*models.ProjectLock)(nil)).Elem(), reflect.TypeOf((*models.EnqueueStatus)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
+	result := pegomock.GetGenericMockFrom(mock).Invoke("TryLock", params, []reflect.Type{reflect.TypeOf((*bool)(nil)).Elem(), reflect.TypeOf((*models.ProjectLock)(nil)).Elem(), reflect.TypeOf((**models.EnqueueStatus)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
 	var ret0 bool
 	var ret1 models.ProjectLock
-	var ret2 models.EnqueueStatus
+	var ret2 *models.EnqueueStatus
 	var ret3 error
 	if len(result) != 0 {
 		if result[0] != nil {
@@ -173,7 +173,7 @@ func (mock *MockBackend) TryLock(_param0 models.ProjectLock) (bool, models.Proje
 			ret1 = result[1].(models.ProjectLock)
 		}
 		if result[2] != nil {
-			ret2 = result[2].(models.EnqueueStatus)
+			ret2 = result[2].(*models.EnqueueStatus)
 		}
 		if result[3] != nil {
 			ret3 = result[3].(error)
@@ -205,21 +205,21 @@ func (mock *MockBackend) Unlock(_param0 models.Project, _param1 string, _param2 
 	return ret0, ret1, ret2
 }
 
-func (mock *MockBackend) UnlockByPull(_param0 string, _param1 int, _param2 bool) ([]models.ProjectLock, models.DequeueStatus, error) {
+func (mock *MockBackend) UnlockByPull(_param0 string, _param1 int, _param2 bool) ([]models.ProjectLock, *models.DequeueStatus, error) {
 	if mock == nil {
 		panic("mock must not be nil. Use myMock := NewMockBackend().")
 	}
 	params := []pegomock.Param{_param0, _param1, _param2}
-	result := pegomock.GetGenericMockFrom(mock).Invoke("UnlockByPull", params, []reflect.Type{reflect.TypeOf((*[]models.ProjectLock)(nil)).Elem(), reflect.TypeOf((*models.DequeueStatus)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
+	result := pegomock.GetGenericMockFrom(mock).Invoke("UnlockByPull", params, []reflect.Type{reflect.TypeOf((*[]models.ProjectLock)(nil)).Elem(), reflect.TypeOf((**models.DequeueStatus)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
 	var ret0 []models.ProjectLock
-	var ret1 models.DequeueStatus
+	var ret1 *models.DequeueStatus
 	var ret2 error
 	if len(result) != 0 {
 		if result[0] != nil {
 			ret0 = result[0].([]models.ProjectLock)
 		}
 		if result[1] != nil {
-			ret1 = result[1].(models.DequeueStatus)
+			ret1 = result[1].(*models.DequeueStatus)
 		}
 		if result[2] != nil {
 			ret2 = result[2].(error)

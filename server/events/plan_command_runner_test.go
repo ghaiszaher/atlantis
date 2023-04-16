@@ -76,7 +76,7 @@ func TestPlanCommandRunner_IsSilenced(t *testing.T) {
 		t.Run(c.Description, func(t *testing.T) {
 			// create an empty DB
 			tmp := t.TempDir()
-			db, err := db.New(tmp)
+			db, err := db.New(tmp, false)
 			Ok(t, err)
 
 			vcsClient := setup(t, func(tc *TestConfig) {

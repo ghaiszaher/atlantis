@@ -47,7 +47,7 @@ var lock = models.ProjectLock{
 
 func TestGetQueueByLock(t *testing.T) {
 	t.Log("Getting Queue By Lock")
-	db, b := newTestDB()
+	db, b := newTestDBQueue(true)
 	defer cleanupDB(db)
 
 	// queue doesn't exist -> should return nil
@@ -74,7 +74,7 @@ func TestGetQueueByLock(t *testing.T) {
 
 func TestSingleQueue(t *testing.T) {
 	t.Log("locking should return correct EnqueueStatus for a single queue")
-	db, b := newTestDB()
+	db, b := newTestDBQueue(true)
 	defer cleanupDB(db)
 
 	lockAcquired, _, _, err := b.TryLock(lock)
@@ -106,7 +106,7 @@ func TestSingleQueue(t *testing.T) {
 
 func TestMultipleQueues(t *testing.T) {
 	t.Log("locking should return correct EnqueueStatus for multiple queues")
-	db, b := newTestDB()
+	db, b := newTestDBQueue(true)
 	defer cleanupDB(db)
 
 	lockAcquired, _, _, err := b.TryLock(lock)
@@ -282,7 +282,7 @@ func TestLockingNoLocks(t *testing.T) {
 
 func TestLockingExistingLock(t *testing.T) {
 	t.Log("if there is an existing lock, lock should...")
-	db, b := newTestDB()
+	db, b := newTestDBQueue(true)
 	defer cleanupDB(db)
 	_, _, _, err := b.TryLock(lock)
 	Ok(t, err)
@@ -490,7 +490,7 @@ func TestUnlockByPullMatching(t *testing.T) {
 
 func TestDequeueAfterUnlock(t *testing.T) {
 	t.Log("unlocking should dequeue and grant lock to the next ProjectLock")
-	db, b := newTestDB()
+	db, b := newTestDBQueue(true)
 	defer cleanupDB(db)
 
 	// first lock acquired
@@ -558,7 +558,7 @@ func TestDequeueAfterUnlock(t *testing.T) {
 
 func TestDequeueAfterUnlockByPull(t *testing.T) {
 	t.Log("unlocking by pull should dequeue and grant lock to all dequeued ProjectLocks")
-	db, b := newTestDB()
+	db, b := newTestDBQueue(true)
 	defer cleanupDB(db)
 
 	_, _, _, err := b.TryLock(lock)
@@ -944,6 +944,11 @@ func TestPullStatus_UpdateMerge(t *testing.T) {
 
 // newTestDB returns a TestDB using a temporary path.
 func newTestDB() (*bolt.DB, *db.BoltDB) {
+	return newTestDBQueue(false)
+}
+
+// newTestDBQueue returns a TestDB using a temporary path with the option to enable queue.
+func newTestDBQueue(queueEnabled bool) (*bolt.DB, *db.BoltDB) {
 	// Retrieve a temporary path.
 	f, err := os.CreateTemp("", "")
 	if err != nil {
@@ -971,13 +976,13 @@ func newTestDB() (*bolt.DB, *db.BoltDB) {
 	}); err != nil {
 		panic(errors.Wrap(err, "could not create bucket"))
 	}
-	b, _ := db.NewWithDB(boltDB, lockBucket, configBucket)
+	b, _ := db.NewWithDB(boltDB, lockBucket, configBucket, queueEnabled)
 	return boltDB, b
 }
 
 func newTestDB2(t *testing.T) *db.BoltDB {
 	tmp := t.TempDir()
-	boltDB, err := db.New(tmp)
+	boltDB, err := db.New(tmp, false)
 	Ok(t, err)
 	return boltDB
 }

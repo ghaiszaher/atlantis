@@ -40,7 +40,7 @@ var pl = models.ProjectLock{Project: project, Pull: pull, User: user, Workspace:
 func TestTryLock_Err(t *testing.T) {
 	RegisterMockTestingT(t)
 	backend := mocks.NewMockBackend()
-	When(backend.TryLock(matchers.AnyModelsProjectLock())).ThenReturn(false, models.ProjectLock{}, models.EnqueueStatus{}, errExpected)
+	When(backend.TryLock(matchers.AnyModelsProjectLock())).ThenReturn(false, models.ProjectLock{}, nil, errExpected)
 	t.Log("when the backend returns an error, TryLock should return that error")
 	l := locking.NewClient(backend)
 	_, err := l.TryLock(project, workspace, pull, user)
@@ -51,7 +51,7 @@ func TestTryLock_Success(t *testing.T) {
 	RegisterMockTestingT(t)
 	currLock := models.ProjectLock{}
 	backend := mocks.NewMockBackend()
-	When(backend.TryLock(matchers.AnyModelsProjectLock())).ThenReturn(true, currLock, models.EnqueueStatus{}, nil)
+	When(backend.TryLock(matchers.AnyModelsProjectLock())).ThenReturn(true, currLock, nil, nil)
 	l := locking.NewClient(backend)
 	r, err := l.TryLock(project, workspace, pull, user)
 	Ok(t, err)
@@ -122,7 +122,7 @@ func TestList(t *testing.T) {
 func TestUnlockByPull(t *testing.T) {
 	RegisterMockTestingT(t)
 	backend := mocks.NewMockBackend()
-	When(backend.UnlockByPull("owner/repo", 1, true)).ThenReturn(nil, models.DequeueStatus{ProjectLocks: nil}, errExpected)
+	When(backend.UnlockByPull("owner/repo", 1, true)).ThenReturn(nil, nil, errExpected)
 	l := locking.NewClient(backend)
 	_, _, err := l.UnlockByPull("owner/repo", 1, true)
 	Equals(t, errExpected, err)

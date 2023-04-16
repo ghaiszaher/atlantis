@@ -73,7 +73,7 @@ func TestDeleteLock_Success(t *testing.T) {
 		},
 	}, &models.ProjectLock{}, nil)
 	tmp := t.TempDir()
-	db, err := db.New(tmp)
+	db, err := db.New(tmp, false)
 	Ok(t, err)
 	dlc := events.DefaultDeleteLockCommand{
 		Locker:           l,
@@ -94,7 +94,7 @@ func TestDeleteLocksByPull_LockerErr(t *testing.T) {
 	pullNum := 2
 	RegisterMockTestingT(t)
 	l := lockmocks.NewMockLocker()
-	When(l.UnlockByPull(repoName, pullNum, true)).ThenReturn(nil, models.DequeueStatus{ProjectLocks: nil}, errors.New("err"))
+	When(l.UnlockByPull(repoName, pullNum, true)).ThenReturn(nil, nil, errors.New("err"))
 	dlc := events.DefaultDeleteLockCommand{
 		Locker: l,
 		Logger: logging.NewNoopLogger(t),
@@ -109,7 +109,7 @@ func TestDeleteLocksByPull_None(t *testing.T) {
 	pullNum := 2
 	RegisterMockTestingT(t)
 	l := lockmocks.NewMockLocker()
-	When(l.UnlockByPull(repoName, pullNum, true)).ThenReturn([]models.ProjectLock{}, models.DequeueStatus{ProjectLocks: nil}, nil)
+	When(l.UnlockByPull(repoName, pullNum, true)).ThenReturn([]models.ProjectLock{}, nil, nil)
 	dlc := events.DefaultDeleteLockCommand{
 		Locker: l,
 		Logger: logging.NewNoopLogger(t),
@@ -124,7 +124,7 @@ func TestDeleteLocksByPull_OldFormat(t *testing.T) {
 	pullNum := 2
 	RegisterMockTestingT(t)
 	l := lockmocks.NewMockLocker()
-	When(l.UnlockByPull(repoName, pullNum, true)).ThenReturn([]models.ProjectLock{{}}, models.DequeueStatus{ProjectLocks: nil}, nil)
+	When(l.UnlockByPull(repoName, pullNum, true)).ThenReturn([]models.ProjectLock{{}}, nil, nil)
 	dlc := events.DefaultDeleteLockCommand{
 		Locker: l,
 		Logger: logging.NewNoopLogger(t),

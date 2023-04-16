@@ -125,21 +125,21 @@ func (mock *MockLocker) Unlock(_param0 string, _param1 bool) (*models.ProjectLoc
 	return ret0, ret1, ret2
 }
 
-func (mock *MockLocker) UnlockByPull(_param0 string, _param1 int, _param2 bool) ([]models.ProjectLock, models.DequeueStatus, error) {
+func (mock *MockLocker) UnlockByPull(_param0 string, _param1 int, _param2 bool) ([]models.ProjectLock, *models.DequeueStatus, error) {
 	if mock == nil {
 		panic("mock must not be nil. Use myMock := NewMockLocker().")
 	}
 	params := []pegomock.Param{_param0, _param1, _param2}
-	result := pegomock.GetGenericMockFrom(mock).Invoke("UnlockByPull", params, []reflect.Type{reflect.TypeOf((*[]models.ProjectLock)(nil)).Elem(), reflect.TypeOf((*models.DequeueStatus)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
+	result := pegomock.GetGenericMockFrom(mock).Invoke("UnlockByPull", params, []reflect.Type{reflect.TypeOf((*[]models.ProjectLock)(nil)).Elem(), reflect.TypeOf((**models.DequeueStatus)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
 	var ret0 []models.ProjectLock
-	var ret1 models.DequeueStatus
+	var ret1 *models.DequeueStatus
 	var ret2 error
 	if len(result) != 0 {
 		if result[0] != nil {
 			ret0 = result[0].([]models.ProjectLock)
 		}
 		if result[1] != nil {
-			ret1 = result[1].(models.DequeueStatus)
+			ret1 = result[1].(*models.DequeueStatus)
 		}
 		if result[2] != nil {
 			ret2 = result[2].(error)
