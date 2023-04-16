@@ -214,7 +214,7 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 		}
 
 		// Dequeue next item
-		if updateQueue {
+		if b.queueEnabled && updateQueue {
 			queueBucket := tx.Bucket(b.queueBucketName)
 			currQueueSerialized := queueBucket.Get([]byte(key))
 
@@ -294,6 +294,9 @@ func (b *BoltDB) List() ([]models.ProjectLock, error) {
 }
 
 func (b *BoltDB) GetQueueByLock(project models.Project, workspace string) (models.ProjectLockQueue, error) {
+	if !b.queueEnabled {
+		return nil, nil
+	}
 	var queue models.ProjectLockQueue
 	err := b.db.View(func(tx *bolt.Tx) error {
 		// construct lock key

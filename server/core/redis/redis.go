@@ -158,7 +158,7 @@ func (r *RedisDB) Unlock(project models.Project, workspace string, updateQueue b
 		}
 		r.client.Del(ctx, key)
 		// Dequeue next item
-		if updateQueue {
+		if r.queueEnabled && updateQueue {
 			queueKey := r.queueKey(project, workspace)
 			currQueueSerialized, err := r.client.Get(ctx, queueKey).Result()
 			if err == redis.Nil {
@@ -284,6 +284,10 @@ func (r *RedisDB) UnlockByPull(repoFullName string, pullNum int, updateQueue boo
 }
 
 func (r *RedisDB) GetQueueByLock(project models.Project, workspace string) (models.ProjectLockQueue, error) {
+	if !r.queueEnabled {
+		return nil, nil
+	}
+
 	key := r.queueKey(project, workspace)
 
 	val, err := r.client.Get(ctx, key).Result()
