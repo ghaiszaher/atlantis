@@ -42,7 +42,7 @@ func TestCleanUpPullWorkspaceErr(t *testing.T) {
 	RegisterMockTestingT(t)
 	w := mocks.NewMockWorkingDir()
 	tmp := t.TempDir()
-	db, err := db.New(tmp)
+	db, err := db.New(tmp, false)
 	Ok(t, err)
 	pce := events.PullClosedExecutor{
 		WorkingDir:         w,
@@ -61,7 +61,7 @@ func TestCleanUpPullUnlockErr(t *testing.T) {
 	w := mocks.NewMockWorkingDir()
 	l := lockmocks.NewMockLocker()
 	tmp := t.TempDir()
-	db, err := db.New(tmp)
+	db, err := db.New(tmp, false)
 	Ok(t, err)
 	pce := events.PullClosedExecutor{
 		Locker:             l,
@@ -70,7 +70,7 @@ func TestCleanUpPullUnlockErr(t *testing.T) {
 		PullClosedTemplate: &events.PullClosedEventTemplate{},
 	}
 	err = errors.New("err")
-	When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(nil, models.DequeueStatus{ProjectLocks: nil}, err)
+	When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(nil, nil, err)
 	actualErr := pce.CleanUpPull(testdata.GithubRepo, testdata.Pull)
 	Equals(t, "cleaning up locks: err", actualErr.Error())
 }
@@ -82,7 +82,7 @@ func TestCleanUpPullNoLocks(t *testing.T) {
 	l := lockmocks.NewMockLocker()
 	cp := vcsmocks.NewMockClient()
 	tmp := t.TempDir()
-	db, err := db.New(tmp)
+	db, err := db.New(tmp, false)
 	Ok(t, err)
 	pce := events.PullClosedExecutor{
 		Locker:     l,
@@ -90,7 +90,7 @@ func TestCleanUpPullNoLocks(t *testing.T) {
 		WorkingDir: w,
 		Backend:    db,
 	}
-	When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(nil, models.DequeueStatus{ProjectLocks: nil}, nil)
+	When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(nil, nil, nil)
 	err = pce.CleanUpPull(testdata.GithubRepo, testdata.Pull)
 	Ok(t, err)
 	cp.VerifyWasCalled(Never()).CreateComment(matchers.AnyModelsRepo(), AnyInt(), AnyString(), AnyString())
@@ -167,7 +167,7 @@ func TestCleanUpPullComments(t *testing.T) {
 			cp := vcsmocks.NewMockClient()
 			l := lockmocks.NewMockLocker()
 			tmp := t.TempDir()
-			db, err := db.New(tmp)
+			db, err := db.New(tmp, false)
 			Ok(t, err)
 			pce := events.PullClosedExecutor{
 				Locker:     l,
@@ -176,7 +176,7 @@ func TestCleanUpPullComments(t *testing.T) {
 				Backend:    db,
 			}
 			t.Log("testing: " + c.Description)
-			When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(c.Locks, models.DequeueStatus{ProjectLocks: nil}, nil)
+			When(l.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(c.Locks, nil, nil)
 			err = pce.CleanUpPull(testdata.GithubRepo, testdata.Pull)
 			Ok(t, err)
 			_, _, comment, _ := cp.VerifyWasCalledOnce().CreateComment(matchers.AnyModelsRepo(), AnyInt(), AnyString(), AnyString()).GetCapturedArguments()
@@ -231,7 +231,7 @@ func TestCleanUpLogStreaming(t *testing.T) {
 		}); err != nil {
 			panic(errors.Wrap(err, "could not create bucket"))
 		}
-		db, _ := db.NewWithDB(boltDB, lockBucket, configBucket)
+		db, _ := db.NewWithDB(boltDB, lockBucket, configBucket, false)
 		result := []command.ProjectResult{
 			{
 				RepoRelDir:  testdata.GithubRepo.FullName,
@@ -265,7 +265,7 @@ func TestCleanUpLogStreaming(t *testing.T) {
 				Workspace: "default",
 			},
 		}
-		When(locker.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(locks, models.DequeueStatus{ProjectLocks: nil}, nil)
+		When(locker.UnlockByPull(testdata.GithubRepo.FullName, testdata.Pull.Num, true)).ThenReturn(locks, nil, nil)
 
 		// Clean up.
 		err = pullClosedExecutor.CleanUpPull(testdata.GithubRepo, testdata.Pull)
