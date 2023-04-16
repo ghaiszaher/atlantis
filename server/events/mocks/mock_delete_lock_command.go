@@ -48,21 +48,21 @@ func (mock *MockDeleteLockCommand) DeleteLock(_param0 string) (*models.ProjectLo
 	return ret0, ret1, ret2
 }
 
-func (mock *MockDeleteLockCommand) DeleteLocksByPull(repoFullName string, pullNum int) (int, *models.DequeueStatus, error) {
+func (mock *MockDeleteLockCommand) DeleteLocksByPull(_param0 string, _param1 int) (int, *models.DequeueStatus, error) {
 	if mock == nil {
 		panic("mock must not be nil. Use myMock := NewMockDeleteLockCommand().")
 	}
 	params := []pegomock.Param{_param0, _param1}
-	result := pegomock.GetGenericMockFrom(mock).Invoke("DeleteLocksByPull", params, []reflect.Type{reflect.TypeOf((*int)(nil)).Elem(), reflect.TypeOf((*models.DequeueStatus)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
+	result := pegomock.GetGenericMockFrom(mock).Invoke("DeleteLocksByPull", params, []reflect.Type{reflect.TypeOf((*int)(nil)).Elem(), reflect.TypeOf((**models.DequeueStatus)(nil)).Elem(), reflect.TypeOf((*error)(nil)).Elem()})
 	var ret0 int
-	var ret1 models.DequeueStatus
+	var ret1 *models.DequeueStatus
 	var ret2 error
 	if len(result) != 0 {
 		if result[0] != nil {
 			ret0 = result[0].(int)
 		}
 		if result[1] != nil {
-			ret1 = result[1].(models.DequeueStatus)
+			ret1 = result[1].(*models.DequeueStatus)
 		}
 		if result[2] != nil {
 			ret2 = result[2].(error)

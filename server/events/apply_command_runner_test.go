@@ -139,7 +139,7 @@ func TestApplyCommandRunner_IsSilenced(t *testing.T) {
 		t.Run(c.Description, func(t *testing.T) {
 			// create an empty DB
 			tmp := t.TempDir()
-			db, err := db.New(tmp)
+			db, err := db.New(tmp, false)
 			Ok(t, err)
 
 			vcsClient := setup(t, func(tc *TestConfig) {
@@ -177,10 +177,14 @@ func TestApplyCommandRunner_IsSilenced(t *testing.T) {
 
 			When(projectCommandBuilder.BuildApplyCommands(ctx, cmd)).Then(func(args []Param) ReturnValues {
 				if c.Matched {
-					return ReturnValues{[]command.ProjectContext{{
-						CommandName:       command.Apply,
-						ProjectPlanStatus: models.PlannedPlanStatus,
-					}}, nil}
+					return ReturnValues{
+						[]command.ProjectContext{
+							{
+								CommandName:       command.Apply,
+								ProjectPlanStatus: models.PlannedPlanStatus,
+							},
+						}, nil,
+					}
 				}
 				return ReturnValues{[]command.ProjectContext{}, nil}
 			})

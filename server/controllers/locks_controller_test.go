@@ -300,7 +300,7 @@ func TestDeleteLock_UpdateProjectStatus(t *testing.T) {
 	}, nil, nil)
 	var backend locking.Backend
 	tmp := t.TempDir()
-	backend, err := db.New(tmp)
+	backend, err := db.New(tmp, false)
 	Ok(t, err)
 	// Seed the DB with a successful plan for that project (that is later discarded).
 	_, err = backend.UpdatePullWithResults(pull, []command.ProjectResult{
@@ -354,7 +354,7 @@ func TestDeleteLock_CommentFailed(t *testing.T) {
 	workingDirLocker := events.NewDefaultWorkingDirLocker()
 	var backend locking.Backend
 	tmp := t.TempDir()
-	backend, err := db.New(tmp)
+	backend, err := db.New(tmp, false)
 	Ok(t, err)
 	When(cp.CreateComment(AnyRepo(), AnyInt(), AnyString(), AnyString())).ThenReturn(errors.New("err"))
 	lc := controllers.LocksController{
@@ -381,7 +381,7 @@ func TestDeleteLock_CommentSuccess(t *testing.T) {
 	workingDirLocker := events.NewDefaultWorkingDirLocker()
 	var backend locking.Backend
 	tmp := t.TempDir()
-	backend, err := db.New(tmp)
+	backend, err := db.New(tmp, false)
 	Ok(t, err)
 	pull := models.PullRequest{
 		BaseRepo: models.Repo{FullName: "owner/repo"},
