@@ -133,7 +133,7 @@ func (c *Client) GetQueueByLock(project models.Project, workspace string) (model
 	return c.backend.GetQueueByLock(project, workspace)
 }
 
-// TODO monikma extend the tests
+// TODO(Ghais) extend the tests
 // UnlockByPull deletes all locks associated with that pull request.
 func (c *Client) UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, *models.DequeueStatus, error) {
 	return c.backend.UnlockByPull(repoFullName, pullNum, updateQueue)

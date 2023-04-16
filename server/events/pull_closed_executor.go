@@ -97,7 +97,7 @@ func (p *PullClosedExecutor) CleanUpPull(repo models.Repo, pull models.PullReque
 		}
 	}
 
-	// TODO monikma extend the tests
+	// TODO(Ghais) extend the tests
 	if err := p.WorkingDir.Delete(repo, pull); err != nil {
 		return errors.Wrap(err, "cleaning workspace")
 	}

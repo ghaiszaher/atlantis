@@ -463,7 +463,7 @@ var boolFlags = map[string]boolFlag{
 		defaultValue: false,
 	},
 	QueueEnabled: {
-		description:  "Enable Lock Queue.", // TODO: better description
+		description:  "Enable Lock Queue.", // TODO(Ghais): better description
 		defaultValue: DefaultQueueEnabled,
 	},
 	RedisTLSEnabled: {

@@ -1023,7 +1023,6 @@ func (s *Server) Index(w http.ResponseWriter, _ *http.Request) {
 	var lockResults []templates.LockIndexData
 	for id, v := range locks {
 		lockURL, _ := s.Router.Get(LockViewRouteName).URL("id", url.QueryEscape(id))
-
 		queue, _ := s.Locker.GetQueueByLock(v.Project, v.Workspace)
 		var queueIndexDataList []templates.QueueItemIndexData
 		if queue != nil {
