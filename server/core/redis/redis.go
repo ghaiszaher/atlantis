@@ -72,7 +72,7 @@ func (r *RedisDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock,
 	var currLock models.ProjectLock
 	key := r.lockKey(newLock.Project, newLock.Workspace)
 	newLockSerialized, _ := json.Marshal(newLock)
-	var enqueueStatus *models.EnqueueStatus = nil
+	var enqueueStatus *models.EnqueueStatus
 
 	val, err := r.client.Get(ctx, key).Result()
 	// if there is no run at that key then we're free to create the lock

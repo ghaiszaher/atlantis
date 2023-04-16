@@ -203,7 +203,7 @@ func (c *NoOpLocker) GetQueueByLock(project models.Project, workspace string) (m
 }
 
 // UnlockByPull deletes all locks associated with that pull request.
-func (c *NoOpLocker) UnlockByPull(repoFullName string, pullNum int, updateQueue bool) ([]models.ProjectLock, *models.DequeueStatus, error) {
+func (c *NoOpLocker) UnlockByPull(_ string, _ int, _ bool) ([]models.ProjectLock, *models.DequeueStatus, error) {
 	return []models.ProjectLock{}, nil, nil
 }
 

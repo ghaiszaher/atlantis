@@ -97,7 +97,7 @@ func NewWithDB(db *bolt.DB, bucket string, globalBucket string, queueEnabled boo
 func (b *BoltDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, *models.EnqueueStatus, error) {
 	var lockAcquired bool
 	var currLock models.ProjectLock
-	var enqueueStatus *models.EnqueueStatus = nil
+	var enqueueStatus *models.EnqueueStatus
 	key := b.lockKey(newLock.Project, newLock.Workspace)
 	newLockSerialized, _ := json.Marshal(newLock)
 	transactionErr := b.db.Update(func(tx *bolt.Tx) error {
