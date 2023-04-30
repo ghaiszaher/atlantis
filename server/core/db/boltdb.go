@@ -232,7 +232,6 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 }
 
 func (b *BoltDB) dequeue(tx *bolt.Tx, key string) (*models.ProjectLock, error) {
-	locksBucket := tx.Bucket(b.locksBucketName)
 	queueBucket := tx.Bucket(b.queueBucketName)
 	currQueueSerialized := queueBucket.Get([]byte(key))
 
@@ -255,6 +254,7 @@ func (b *BoltDB) dequeue(tx *bolt.Tx, key string) (*models.ProjectLock, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "serializing")
 		}
+		locksBucket := tx.Bucket(b.locksBucketName)
 		if err := locksBucket.Put([]byte(key), dequeuedLockSerialized); err != nil {
 			return nil, errors.Wrap(err, "failed to give the lock to next PR in the queue")
 		}
