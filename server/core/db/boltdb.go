@@ -262,7 +262,7 @@ func (b *BoltDB) dequeue(tx *bolt.Tx, key string) (*models.ProjectLock, error) {
 
 	// New queue is empty and can be deleted
 	if len(newQueue) == 0 {
-		return nil, queueBucket.Delete([]byte(key))
+		return dequeuedLock, queueBucket.Delete([]byte(key))
 	}
 
 	newQueueSerialized, err := json.Marshal(newQueue)
