@@ -215,45 +215,11 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 
 		// Dequeue next item
 		if b.queueEnabled && updateQueue {
-			queueBucket := tx.Bucket(b.queueBucketName)
-			currQueueSerialized := queueBucket.Get([]byte(key))
-
-			// Queue doesn't exist
-			if currQueueSerialized == nil {
-				return nil
-			}
-
-			// Queue exists
-			var currQueue models.ProjectLockQueue
-			if err := json.Unmarshal(currQueueSerialized, &currQueue); err != nil {
-				return errors.Wrap(err, "failed to deserialize queue for current lock")
-			}
-
-			var newQueue models.ProjectLockQueue
-			dequeuedLock, newQueue = currQueue.Dequeue()
-
-			// A lock was dequeued - update current lock holder
-			if dequeuedLock != nil {
-				dequeuedLockSerialized, err := json.Marshal(*dequeuedLock)
-				if err != nil {
-					return errors.Wrap(err, "serializing")
-				}
-				if err := bucket.Put([]byte(key), dequeuedLockSerialized); err != nil {
-					return errors.Wrap(err, "failed to give the lock to next PR in the queue")
-				}
-			}
-
-			// New queue is empty and can be deleted
-			if len(newQueue) == 0 {
-				return queueBucket.Delete([]byte(key))
-			}
-
-			newQueueSerialized, err := json.Marshal(newQueue)
+			var err error
+			dequeuedLock, err = b.dequeue(tx, key)
 			if err != nil {
-				return errors.Wrap(err, "serializing")
+				return errors.Wrapf(err, "failed to dequeue key %s", key)
 			}
-			return queueBucket.Put([]byte(key), newQueueSerialized)
-
 		}
 		return nil
 	})
@@ -263,6 +229,47 @@ func (b *BoltDB) Unlock(p models.Project, workspace string, updateQueue bool) (*
 		return &lock, dequeuedLock, err
 	}
 	return nil, nil, err
+}
+
+func (b *BoltDB) dequeue(tx *bolt.Tx, key string) (*models.ProjectLock, error) {
+	locksBucket := tx.Bucket(b.locksBucketName)
+	queueBucket := tx.Bucket(b.queueBucketName)
+	currQueueSerialized := queueBucket.Get([]byte(key))
+
+	// Queue doesn't exist
+	if currQueueSerialized == nil {
+		return nil, nil
+	}
+
+	// Queue exists
+	var currQueue models.ProjectLockQueue
+	if err := json.Unmarshal(currQueueSerialized, &currQueue); err != nil {
+		return nil, errors.Wrap(err, "failed to deserialize queue for current lock")
+	}
+
+	dequeuedLock, newQueue := currQueue.Dequeue()
+
+	// A lock was dequeued - update current lock holder
+	if dequeuedLock != nil {
+		dequeuedLockSerialized, err := json.Marshal(*dequeuedLock)
+		if err != nil {
+			return nil, errors.Wrap(err, "serializing")
+		}
+		if err := locksBucket.Put([]byte(key), dequeuedLockSerialized); err != nil {
+			return nil, errors.Wrap(err, "failed to give the lock to next PR in the queue")
+		}
+	}
+
+	// New queue is empty and can be deleted
+	if len(newQueue) == 0 {
+		return nil, queueBucket.Delete([]byte(key))
+	}
+
+	newQueueSerialized, err := json.Marshal(newQueue)
+	if err != nil {
+		return nil, errors.Wrap(err, "serializing")
+	}
+	return dequeuedLock, queueBucket.Put([]byte(key), newQueueSerialized)
 }
 
 // List lists all current locks.

@@ -70,14 +70,14 @@ func NewWithClient(client *redis.Client, bucket string, globalBucket string) (*R
 // lock that is preventing this lock from being acquired.
 func (r *RedisDB) TryLock(newLock models.ProjectLock) (bool, models.ProjectLock, *models.EnqueueStatus, error) {
 	var currLock models.ProjectLock
-	key := r.lockKey(newLock.Project, newLock.Workspace)
+	lockKey := r.lockKey(newLock.Project, newLock.Workspace)
 	newLockSerialized, _ := json.Marshal(newLock)
 	var enqueueStatus *models.EnqueueStatus
 
-	val, err := r.client.Get(ctx, key).Result()
+	val, err := r.client.Get(ctx, lockKey).Result()
 	// if there is no run at that key then we're free to create the lock
 	if err == redis.Nil {
-		err := r.client.Set(ctx, key, newLockSerialized, 0).Err()
+		err := r.client.Set(ctx, lockKey, newLockSerialized, 0).Err()
 		if err != nil {
 			return false, currLock, enqueueStatus, errors.Wrap(err, "db transaction failed")
 		}
@@ -145,9 +145,9 @@ func (r *RedisDB) enqueue(newLock models.ProjectLock) (*models.EnqueueStatus, er
 // lock to the next PR in the queue, update the queue and return the dequeued lock.
 func (r *RedisDB) Unlock(project models.Project, workspace string, updateQueue bool) (*models.ProjectLock, *models.ProjectLock, error) {
 	var lock models.ProjectLock
-	key := r.lockKey(project, workspace)
+	lockKey := r.lockKey(project, workspace)
 
-	val, err := r.client.Get(ctx, key).Result()
+	val, err := r.client.Get(ctx, lockKey).Result()
 	if err == redis.Nil {
 		return nil, nil, nil
 	} else if err != nil {
@@ -156,53 +156,58 @@ func (r *RedisDB) Unlock(project models.Project, workspace string, updateQueue b
 		if err := json.Unmarshal([]byte(val), &lock); err != nil {
 			return nil, nil, errors.Wrap(err, "failed to deserialize current lock")
 		}
-		r.client.Del(ctx, key)
+		r.client.Del(ctx, lockKey)
 		// Dequeue next item
 		if r.queueEnabled && updateQueue {
-			queueKey := r.queueKey(project, workspace)
-			currQueueSerialized, err := r.client.Get(ctx, queueKey).Result()
-			if err == redis.Nil {
-				return &lock, nil, nil
-			} else if err != nil {
-				return &lock, nil, errors.Wrap(err, "db transaction failed")
-			} else {
-				var currQueue models.ProjectLockQueue
-				if err := json.Unmarshal([]byte(currQueueSerialized), &currQueue); err != nil {
-					return &lock, nil, errors.Wrap(err, "failed to deserialize queue for current lock")
-				}
-
-				dequeuedLock, newQueue := currQueue.Dequeue()
-
-				// A lock was dequeued - update current lock holder
-				if dequeuedLock != nil {
-					dequeuedLockSerialized, err := json.Marshal(*dequeuedLock)
-					if err != nil {
-						return &lock, dequeuedLock, errors.Wrap(err, "serializing")
-					}
-					err = r.client.Set(ctx, key, dequeuedLockSerialized, 0).Err()
-					if err != nil {
-						return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
-					}
-				}
-
-				// New queue is empty and can be deleted
-				if len(newQueue) == 0 {
-					r.client.Del(ctx, queueKey)
-					return &lock, dequeuedLock, nil
-				}
-
-				newQueueSerialized, err := json.Marshal(newQueue)
-				if err != nil {
-					return &lock, dequeuedLock, errors.Wrap(err, "serializing")
-				}
-				err = r.client.Set(ctx, queueKey, newQueueSerialized, 0).Err()
-				if err != nil {
-					return &lock, dequeuedLock, errors.Wrap(err, "db transaction failed")
-				}
-				return &lock, dequeuedLock, nil
-			}
+			dequeuedLock, err := r.dequeue(project, workspace, lockKey)
+			return &lock, dequeuedLock, err
 		}
 		return &lock, nil, nil
+	}
+}
+
+func (r *RedisDB) dequeue(project models.Project, workspace string, lockKey string) (*models.ProjectLock, error) {
+	queueKey := r.queueKey(project, workspace)
+	currQueueSerialized, err := r.client.Get(ctx, queueKey).Result()
+	if err == redis.Nil {
+		return nil, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "db transaction failed")
+	} else {
+		var currQueue models.ProjectLockQueue
+		if err := json.Unmarshal([]byte(currQueueSerialized), &currQueue); err != nil {
+			return nil, errors.Wrap(err, "failed to deserialize queue for current lock")
+		}
+
+		dequeuedLock, newQueue := currQueue.Dequeue()
+
+		// A lock was dequeued - update current lock holder
+		if dequeuedLock != nil {
+			dequeuedLockSerialized, err := json.Marshal(*dequeuedLock)
+			if err != nil {
+				return dequeuedLock, errors.Wrap(err, "serializing")
+			}
+			err = r.client.Set(ctx, lockKey, dequeuedLockSerialized, 0).Err()
+			if err != nil {
+				return dequeuedLock, errors.Wrap(err, "db transaction failed")
+			}
+		}
+
+		// New queue is empty and can be deleted
+		if len(newQueue) == 0 {
+			r.client.Del(ctx, queueKey)
+			return dequeuedLock, nil
+		}
+
+		newQueueSerialized, err := json.Marshal(newQueue)
+		if err != nil {
+			return dequeuedLock, errors.Wrap(err, "serializing")
+		}
+		err = r.client.Set(ctx, queueKey, newQueueSerialized, 0).Err()
+		if err != nil {
+			return dequeuedLock, errors.Wrap(err, "db transaction failed")
+		}
+		return dequeuedLock, nil
 	}
 }
 
