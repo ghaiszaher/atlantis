@@ -283,6 +283,8 @@ func (r *RedisDB) UnlockByPull(repoFullName string, pullNum int, updateQueue boo
 	return locks, &models.DequeueStatus{ProjectLocks: dequeuedLocks}, nil
 }
 
+// GetQueueByLock returns the queue for a given lock.
+// If queue is not enabled or if no such queue exists, it returns a nil pointer.
 func (r *RedisDB) GetQueueByLock(project models.Project, workspace string) (models.ProjectLockQueue, error) {
 	if !r.queueEnabled {
 		return nil, nil
@@ -290,14 +292,16 @@ func (r *RedisDB) GetQueueByLock(project models.Project, workspace string) (mode
 
 	key := r.queueKey(project, workspace)
 
-	val, err := r.client.Get(ctx, key).Result()
+	queueSerialized, err := r.client.Get(ctx, key).Result()
 	if err == redis.Nil {
+		// Queue not found
 		return nil, nil
 	} else if err != nil {
 		return nil, errors.Wrap(err, "db transaction failed")
 	} else {
+		// Queue is found, deserialize and return
 		var queue models.ProjectLockQueue
-		if err := json.Unmarshal([]byte(val), &queue); err != nil {
+		if err := json.Unmarshal([]byte(queueSerialized), &queue); err != nil {
 			return nil, errors.Wrapf(err, "deserializing queue at key %q", key)
 		}
 		for _, lock := range queue {
