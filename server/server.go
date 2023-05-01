@@ -1026,22 +1026,7 @@ func (s *Server) Index(w http.ResponseWriter, _ *http.Request) {
 	for id, v := range locks {
 		lockURL, _ := s.Router.Get(LockViewRouteName).URL("id", url.QueryEscape(id))
 		queue, _ := s.Locker.GetQueueByLock(v.Project, v.Workspace)
-		var queueIndexDataList []templates.QueueItemIndexData
-		for _, projectLock := range queue {
-			queueIndexDataList = append(queueIndexDataList, templates.QueueItemIndexData{
-				// NOTE: must use .String() instead of .Path because we need the
-				// query params as part of the lock URL.
-				LockPath:      "Not yet acquired",
-				RepoFullName:  projectLock.Project.RepoFullName,
-				PullNum:       projectLock.Pull.Num,
-				Path:          projectLock.Project.Path,
-				Workspace:     projectLock.Workspace,
-				Time:          projectLock.Time,
-				TimeFormatted: projectLock.Time.Format("02-01-2006 15:04:05"),
-				PullURL:       projectLock.Pull.URL,
-				Author:        projectLock.Pull.Author,
-			})
-		}
+		queueIndexDataList := controllers.GetQueueItemIndexData(queue)
 		lockResults = append(lockResults, templates.LockIndexData{
 			// NOTE: must use .String() instead of .Path because we need the
 			// query params as part of the lock URL.

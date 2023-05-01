@@ -411,3 +411,51 @@ func TestDeleteLock_CommentSuccess(t *testing.T) {
 		"**Warning**: The plan for dir: `path` workspace: `workspace` was **discarded** via the Atlantis UI.\n\n"+
 			"To `apply` this plan you must run `plan` again.", "")
 }
+
+func TestQueueItemIndexData(t *testing.T) {
+	layout := "2006-01-02T15:04:05.000Z"
+	strLockTime := "2020-09-01T00:45:26.371Z"
+	lockTime, _ := time.Parse(layout, strLockTime)
+	tests := []struct {
+		name  string
+		queue models.ProjectLockQueue
+		want  []templates.QueueItemIndexData
+	}{
+		{
+			name:  "empty list",
+			queue: models.ProjectLockQueue{},
+			want:  nil,
+		},
+		{
+			name: "list with one item",
+			queue: models.ProjectLockQueue{
+				{
+					Project:   models.Project{RepoFullName: "org/repo", Path: "path"},
+					Workspace: "workspace",
+					Time:      lockTime,
+					Pull:      models.PullRequest{Num: 15, Author: "pull-author", URL: "org/repo/pull/15"},
+				},
+			},
+			want: []templates.QueueItemIndexData{
+				{
+					LockPath:      "Not yet acquired",
+					RepoFullName:  "org/repo",
+					PullNum:       15,
+					Path:          "path",
+					Workspace:     "workspace",
+					Time:          lockTime,
+					TimeFormatted: "01-09-2020 00:45:26",
+					PullURL:       "org/repo/pull/15",
+					Author:        "pull-author",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := controllers.GetQueueItemIndexData(tt.queue); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetQueueItemIndexData() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

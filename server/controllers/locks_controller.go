@@ -79,23 +79,9 @@ func (l *LocksController) GetLock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get queues locks for this lock details page
-	var queue []models.ProjectLock
+	var queue models.ProjectLockQueue
 	queue, _ = l.Locker.GetQueueByLock(lock.Project, lock.Workspace)
-	var lockDetailQueue []templates.QueueItemIndexData
-	for _, projectLock := range queue {
-		lockDetailQueue = append(lockDetailQueue, templates.QueueItemIndexData{
-			LockPath:      "Not yet acquired",
-			RepoFullName:  projectLock.Project.RepoFullName,
-			PullNum:       projectLock.Pull.Num,
-			Path:          projectLock.Project.Path,
-			Workspace:     projectLock.Workspace,
-			Time:          projectLock.Time,
-			TimeFormatted: projectLock.Time.Format("02-01-2006 15:04:05"),
-			PullURL:       projectLock.Pull.URL,
-			Author:        projectLock.Pull.Author,
-		})
-	}
-
+	lockDetailQueue := GetQueueItemIndexData(queue)
 	owner, repo := models.SplitRepoFullName(lock.Project.RepoFullName)
 	viewData := templates.LockDetailData{
 		LockKeyEncoded:  id,
@@ -204,4 +190,22 @@ func buildCommentOnDequeuedPullRequest(projectLocks []models.ProjectLock) string
 
 	return fmt.Sprintf("%s\nThe following locks have been aquired by this PR and can now be planned:\n%s",
 		lockCreatorMention, releasedLocksMessage)
+}
+
+func GetQueueItemIndexData(q models.ProjectLockQueue) []templates.QueueItemIndexData {
+	var queueIndexDataList []templates.QueueItemIndexData
+	for _, projectLock := range q {
+		queueIndexDataList = append(queueIndexDataList, templates.QueueItemIndexData{
+			LockPath:      "Not yet acquired",
+			RepoFullName:  projectLock.Project.RepoFullName,
+			PullNum:       projectLock.Pull.Num,
+			Path:          projectLock.Project.Path,
+			Workspace:     projectLock.Workspace,
+			Time:          projectLock.Time,
+			TimeFormatted: projectLock.Time.Format("02-01-2006 15:04:05"),
+			PullURL:       projectLock.Pull.URL,
+			Author:        projectLock.Pull.Author,
+		})
+	}
+	return queueIndexDataList
 }
