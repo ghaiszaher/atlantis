@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-//go:generate pegomock generate -m --package mocks -o mocks/mock_template_writer.go TemplateWriter
+//go:generate pegomock generate --package mocks -o mocks/mock_template_writer.go TemplateWriter
 
 // TemplateWriter is an interface over html/template that's used to enable
 // mocking.
@@ -36,6 +36,7 @@ type LockIndexData struct {
 	PullNum       int
 	Path          string
 	Workspace     string
+	LockedBy      string
 	Time          time.Time
 	TimeFormatted string
 	Queue         []QueueItemIndexData
@@ -83,11 +84,15 @@ var IndexTemplate = template.Must(template.New("index.html.tmpl").Parse(`
   <script src="{{ .CleanedBasePath }}/static/js/jquery-3.5.1.min.js"></script>
   <script>
     $(document).ready(function () {
-      $("p.js-discard-success").toggle(document.URL.indexOf("discard=true") !== -1);
+      if (document.URL.indexOf("discard=true") !== -1) {
+        $("p.js-discard-success").show();
+        setTimeout(function() {
+          $("p.js-discard-success").fadeOut('slow',function(){
+            window.location.href = "/";
+          })
+        }, 5000); // <-- time in milliseconds
+      }
     });
-    setTimeout(function() {
-        $("p.js-discard-success").fadeOut('slow');
-    }, 5000); // <-- time in milliseconds
   </script>
   <link rel="stylesheet" href="{{ .CleanedBasePath }}/static/css/normalize.css">
   <link rel="stylesheet" href="{{ .CleanedBasePath }}/static/css/skeleton.css">
@@ -123,11 +128,30 @@ var IndexTemplate = template.Must(template.New("index.html.tmpl").Parse(`
     <p class="title-heading small"><strong>Locks</strong></p>
     {{ if .Locks }}
     {{ $basePath := .CleanedBasePath }}
+    <div class="lock-grid">
+    <div class="lock-header">
+      <span>Repository</span>
+      <span>Project</span>
+      <span>Workspace</span>
+      <span>Locked By</span>
+      <span>Date/Time</span>
+      <span>Status</span>
+    </div>
     {{ range .Locks }}
-      <a href="{{ $basePath }}{{.LockPath}}">
-        <div class="twelve columns button content lock-row">
-        <div class="list-title">{{.RepoFullName}} <span class="heading-font-size">#{{.PullNum}}</span> <code>{{.Path}}</code> <code>{{.Workspace}}</code></div>
-        {{ if .Queue }}
+        <div class="lock-row">
+        <a class="lock-link" href="{{ $basePath }}{{.LockPath}}">
+          <span class="lock-reponame">{{.RepoFullName}} #{{.PullNum}}</span>
+        </a>
+        <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
+          <span class="lock-path">{{.Path}}</span>
+        </a>
+        <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
+          <span><code>{{.Workspace}}</code></span>
+        </a>
+        <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
+          <span class="lock-username">{{.LockedBy}}</span>
+        </a>
+          {{ if .Queue }}
         <div class="list-title" style="margin-left:10px">
             Queue: [
             {{ range .Queue }}
@@ -143,11 +167,16 @@ Time: {{.TimeFormatted}}"
             ]
         </div>
         {{ end }}
-        <div class="list-status"><code>Locked</code></div>
-        <div class="list-timestamp"><span class="heading-font-size">{{.TimeFormatted}}</span></div>
+        <span class="lock-username">{{.LockedBy}}</span>
+        <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
+          <span class="lock-datetime">{{.TimeFormatted}}</span>
+        </a>
+        <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
+          <span><code>Locked</code></span>
+        </a>
         </div>
-      </a>
     {{ end }}
+    </div>
     {{ else }}
     <p class="placeholder">No locks found.</p>
     {{ end }}
@@ -197,7 +226,7 @@ Time: {{.TimeFormatted}}"
                 url: '{{ .CleanedBasePath }}/apply/lock',
                 type: 'POST',
                 success: function(result) {
-                  window.location.replace("{{ .CleanedBasePath }}/?discard=true");
+                  window.location.replace("{{ .CleanedBasePath }}/");
                 }
             });
           });
@@ -214,7 +243,7 @@ Time: {{.TimeFormatted}}"
                 url: '{{ .CleanedBasePath }}/apply/unlock',
                 type: 'DELETE',
                 success: function(result) {
-                  window.location.replace("{{ .CleanedBasePath }}/?discard=true");
+                  window.location.replace("{{ .CleanedBasePath }}/");
                 }
             });
           });
@@ -304,14 +333,14 @@ var LockTemplate = template.Must(template.New("lock.html.tmpl").Parse(`
     <div class="navbar-spacer"></div>
     <br>
     <section>
-      <div class="eight columns">
-        <h6><code>Repo Owner</code>: <strong>{{.RepoOwner}}</strong></h6>
-        <h6><code>Repo Name</code>: <strong>{{.RepoName}}</strong></h6>
-        <h6><code>Pull Request Link</code>: <a href="{{.PullRequestLink}}" target="_blank"><strong>{{.PullRequestLink}}</strong></a></h6>
-        <h6><code>Locked By</code>: <strong>{{.LockedBy}}</strong></h6>
-        <h6><code>Workspace</code>: <strong>{{.Workspace}}</strong></h6>
+      <div class="lock-detail-grid">
+        <div><strong>Repo Owner:</strong></div><div>{{.RepoOwner}}</div>
+        <div><strong>Repo Name:</strong></div><div>{{.RepoName}}</div>
+        <div><strong>Pull Request Link:</strong></div><div><a href="{{.PullRequestLink}}" target="_blank">{{.PullRequestLink}}</a></div>
+        <div><strong>Locked By:</strong></div><div>{{.LockedBy}}</div>
+        <div><strong>Workspace:</strong></div><div>{{.Workspace}}</div>
         {{ if .Queue }}
-        <h6><code>Queue</code>:
+        <div><strong>Queue</strong>:
             <ol>
                 {{ range .Queue }}
                 <li class="queue-item">
@@ -325,12 +354,12 @@ var LockTemplate = template.Must(template.New("lock.html.tmpl").Parse(`
                 </li>
             {{ end }}
             </ol>
+        </div>
         {{ end }}
         <br>
       </div>
-      <div class="four columns">
-        <a class="button button-default" id="discardPlanUnlock">Discard Plan & Unlock</a>
-      </div>
+      <br>
+        <a class="button button-primary" id="discardPlanUnlock">Discard Plan & Unlock</a>
     </section>
   </div>
   <div id="discardMessageModal" class="modal">
@@ -424,7 +453,6 @@ var ProjectJobsTemplate = template.Must(template.New("blank.html.tmpl").Parse(`
         left: 0px;
         bottom: 0px;
         right: 0px;
-        overflow: auto;
         border: 5px solid white;
         }
 
@@ -453,6 +481,8 @@ var ProjectJobsTemplate = template.Must(template.New("blank.html.tmpl").Parse(`
     <script src="{{ .CleanedBasePath }}/static/js/xterm-4.9.0.js"></script>
     <script src="{{ .CleanedBasePath }}/static/js/xterm-addon-attach-0.6.0.js"></script>
     <script src="{{ .CleanedBasePath }}/static/js/xterm-addon-fit-0.4.0.js"></script>
+    <script src="{{ .CleanedBasePath }}/static/js/xterm-addon-search-0.7.0.js"></script>
+    <script src="{{ .CleanedBasePath }}/static/js/xterm-addon-search-bar.js"></script>
 
     <script>
       function updateTerminalStatus(msg) {
@@ -477,9 +507,14 @@ var ProjectJobsTemplate = template.Must(template.New("blank.html.tmpl").Parse(`
       })
       var attachAddon = new AttachAddon.AttachAddon(socket);
       var fitAddon = new FitAddon.FitAddon();
+      var searchAddon = new SearchAddon.SearchAddon();
+      var searchBarAddon = new SearchBarAddon.SearchBarAddon({searchAddon});
       term.loadAddon(attachAddon);
       term.loadAddon(fitAddon);
+      term.loadAddon(searchAddon);
+      term.loadAddon(searchBarAddon);
       term.open(document.getElementById("terminal"));
+      searchBarAddon.show();
       fitAddon.fit();
       window.addEventListener("resize", () => fitAddon.fit());
     </script>
@@ -621,7 +656,7 @@ var GithubAppSetupTemplate = template.Must(template.New("github-app.html.tmpl").
     <a title="atlantis" href="{{ .CleanedBasePath }}"><img class="hero" src="{{ .CleanedBasePath }}/static/images/atlantis-icon_512.png"/></a>
     <p class="title-heading">atlantis</p>
 
-    <p class="js-discard-success"><strong>
+    <p class="github-app-msg"><strong>
     {{ if .Target }}
       Create a github app
     {{ else }}

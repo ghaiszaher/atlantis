@@ -9,7 +9,7 @@ import (
 	"github.com/runatlantis/atlantis/server/core/config/valid"
 	"github.com/runatlantis/atlantis/server/events/models"
 	"github.com/runatlantis/atlantis/server/logging"
-	"github.com/uber-go/tally"
+	tally "github.com/uber-go/tally/v4"
 )
 
 const (
@@ -99,6 +99,8 @@ type ProjectContext struct {
 	PolicySets valid.PolicySets
 	// PolicySetTarget describes which policy sets to target on the approve_policies step.
 	PolicySetTarget string
+	// ClearPolicyApproval determines whether policy counts will be incremented or cleared.
+	ClearPolicyApproval bool
 	// DeleteSourceBranchOnMerge will attempt to allow a branch to be deleted when merged (AzureDevOps & GitLab Support Only)
 	DeleteSourceBranchOnMerge bool
 	// RepoLocking will get a lock when plan
@@ -109,6 +111,8 @@ type ProjectContext struct {
 	JobID string
 	// The index of order group. Before planning/applying it will use to sort projects. Default is 0.
 	ExecutionOrderGroup int
+	// If plans/applies should be aborted if any prior plan/apply fails
+	AbortOnExcecutionOrderFail bool
 }
 
 // SetProjectScopeTags adds ProjectContext tags to a new returned scope.
