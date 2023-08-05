@@ -354,7 +354,7 @@ var LockTemplate = template.Must(template.New("lock.html.tmpl").Parse(`
                 </li>
             {{ end }}
             </ol>
-		</div>
+        </div>
         {{ end }}
         <br>
       </div>
