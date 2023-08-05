@@ -41,7 +41,7 @@ func (l *DefaultDeleteLockCommand) DeleteLock(id string) (*models.ProjectLock, *
 	removeErr := l.WorkingDir.DeletePlan(lock.Pull.BaseRepo, lock.Pull, lock.Workspace, lock.Project.Path, projectName)
 	if removeErr != nil {
 		l.Logger.Warn("Failed to delete plan: %s", removeErr)
-		return nil, removeErr
+		return nil, nil, removeErr
 	}
 
 	return lock, dequeuedLock, nil
