@@ -149,6 +149,8 @@ var IndexTemplate = template.Must(template.New("index.html.tmpl").Parse(`
           <span><code>{{.Workspace}}</code></span>
         </a>
         <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
+          <span class="lock-username">{{.LockedBy}}</span>
+        </a>
           {{ if .Queue }}
         <div class="list-title" style="margin-left:10px">
             Queue: [
@@ -166,7 +168,6 @@ Time: {{.TimeFormatted}}"
         </div>
         {{ end }}
         <span class="lock-username">{{.LockedBy}}</span>
-        </a>
         <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
           <span class="lock-datetime">{{.TimeFormatted}}</span>
         </a>
