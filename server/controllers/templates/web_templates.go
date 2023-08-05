@@ -136,6 +136,7 @@ var IndexTemplate = template.Must(template.New("index.html.tmpl").Parse(`
       <span>Locked By</span>
       <span>Date/Time</span>
       <span>Status</span>
+      <span>Queue</span>
     </div>
     {{ range .Locks }}
         <div class="lock-row">
@@ -151,28 +152,14 @@ var IndexTemplate = template.Must(template.New("index.html.tmpl").Parse(`
         <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
           <span class="lock-username">{{.LockedBy}}</span>
         </a>
-          {{ if .Queue }}
-        <div class="list-title" style="margin-left:10px">
-            Queue: [
-            {{ range .Queue }}
-                <a title=
-"Author: {{.Author}}
-Url: {{.PullURL}}
-Pull Req No.: #{{.PullNum}}
-Time: {{.TimeFormatted}}"
-                    href="{{.PullURL}}">
-                    #{{.PullNum}}
-                </a>
-            {{ end }}
-            ]
-        </div>
-        {{ end }}
-        <span class="lock-username">{{.LockedBy}}</span>
         <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
           <span class="lock-datetime">{{.TimeFormatted}}</span>
         </a>
         <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
           <span><code>Locked</code></span>
+        </a>
+        <a class="lock-link" tabindex="-1" href="{{ $basePath }}{{.LockPath}}">
+          {{ len .Queue }}
         </a>
         </div>
     {{ end }}

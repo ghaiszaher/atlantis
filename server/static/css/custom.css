@@ -254,7 +254,7 @@ tbody {
 /* Styles for the lock index */
 .lock-grid{
   display: grid;
-  grid-template-columns: auto auto auto auto auto auto;
+  grid-template-columns: auto auto auto auto auto auto auto;
   border: 1px solid #dbeaf4;
   width: 100%;
   font-size: 12px;
