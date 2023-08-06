@@ -327,23 +327,17 @@ var LockTemplate = template.Must(template.New("lock.html.tmpl").Parse(`
         <div><strong>Locked By:</strong></div><div>{{.LockedBy}}</div>
         <div><strong>Workspace:</strong></div><div>{{.Workspace}}</div>
         {{ if .Queue }}
-        <div><strong>Queue</strong>:
-            <ol>
-                {{ range .Queue }}
-                <li class="queue-item">
-                    <div class="queue-item-details">
-                        <code>Url</code>: <a href="{{.PullURL}}"><strong>{{.PullURL}}</strong></a>
-                        </br>
-                        <code>Author</code>: <strong>{{.Author}}</strong>
-                        </br>
-                        <code>Time</code>: <strong>{{.TimeFormatted}}</strong>
-                    </div>
-                </li>
-            {{ end }}
-            </ol>
-        </div>
+		<div><strong>Queue:</strong></div>
+		<div>
+            {{ range .Queue }}
+			<div class="lock-detail-grid">
+				<div><strong>Pull Request Link:</strong></div><div><a href="{{.PullURL}}">{{.PullURL}}</a></div>
+				<div><strong>Author</strong></div><div>{{.Author}}</div>
+				<div><strong>Time:</strong></div><div>{{.TimeFormatted}}</div>
+			</div>
+			{{ end }}
+		</div>
         {{ end }}
-        <br>
       </div>
       <br>
         <a class="button button-primary" id="discardPlanUnlock">Discard Plan & Unlock</a>
