@@ -3,7 +3,7 @@ name: tester
 on:
   push:
     branches:
-      - "main"
+      - "test/no-autoplan-label"
     paths:
       - '**.go'
       - 'go.*'
