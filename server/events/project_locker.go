@@ -92,8 +92,11 @@ func (p *DefaultProjectLocker) TryLock(log logging.SimpleLogging, pull models.Pu
 	return &TryLockResponse{
 		LockAcquired: true,
 		UnlockFn: func() error {
-			// TODO(Ghais) this will be called if there was a plan error and the lock was automatically dropped;
-			//  Should we assure dequeuing of the next PR here too?
+			// TODO(Ghais):
+			//  1. based on a feature flag, either call this function below or
+			//  omit UnlockFn altogether (caller doesn't lose the lock
+			//  2. If the function returns a non-nil dequeued lock -> comment on the other PR.
+			//  Also see server/events/unlock_command_runner.go:77 (buildCommentOnDequeuedPullRequest)
 			_, _, err := p.Locker.Unlock(lockAttempt.LockKey)
 			return err
 		},

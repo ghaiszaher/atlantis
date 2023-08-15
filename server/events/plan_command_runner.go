@@ -241,7 +241,8 @@ func (p *PlanCommandRunner) run(ctx *command.Context, cmd *CommentCommand) {
 	if !cmd.IsForSpecificProject() {
 		ctx.Log.Debug("deleting previous plans and locks")
 		p.deletePlans(ctx)
-		_, _, err = p.lockingLocker.UnlockByPull(baseRepo.FullName, pull.Num)
+		// TODO(Ghais): make sure it's fine to remove this line:
+		//_, _, err = p.lockingLocker.UnlockByPull(baseRepo.FullName, pull.Num)
 		if err != nil {
 			ctx.Log.Err("deleting locks: %s", err)
 		}
