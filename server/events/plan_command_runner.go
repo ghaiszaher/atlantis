@@ -241,8 +241,6 @@ func (p *PlanCommandRunner) run(ctx *command.Context, cmd *CommentCommand) {
 	if !cmd.IsForSpecificProject() {
 		ctx.Log.Debug("deleting previous plans and locks")
 		p.deletePlans(ctx)
-		// TODO(Ghais): this is the only place to pass updateQueue=false - is it fine to just drop this line altogether?
-		//  No need to delete the locks all the locks, deleting plans is enough.
 		_, _, err = p.lockingLocker.UnlockByPull(baseRepo.FullName, pull.Num, false)
 		if err != nil {
 			ctx.Log.Err("deleting locks: %s", err)
