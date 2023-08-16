@@ -74,10 +74,15 @@ func (p *DefaultProjectLocker) TryLock(log logging.SimpleLogging, pull models.Pu
 		if err != nil {
 			return nil, err
 		}
-		failureMsg := fmt.Sprintf(
-			"This project is currently locked by an unapplied plan from pull %s. To continue, delete the lock from %s or apply that plan and merge the pull request.\n\nOnce the lock is released, comment `atlantis plan` here to re-plan.",
-			link,
-			link)
+		var failureMsg string
+		if lockAttempt.EnqueueStatus == nil {
+			failureMsg = fmt.Sprintf(
+				"This project is currently locked by an unapplied plan from pull %s. To continue, delete the lock from %s or apply that plan and merge the pull request.\n\nOnce the lock is released, comment `atlantis plan` here to re-plan.",
+				link,
+				link)
+		} else {
+			failureMsg = generateMessageWithQueueStatus(link, lockAttempt)
+		}
 		return &TryLockResponse{
 			LockAcquired:      false,
 			LockFailureReason: failureMsg,
@@ -87,9 +92,25 @@ func (p *DefaultProjectLocker) TryLock(log logging.SimpleLogging, pull models.Pu
 	return &TryLockResponse{
 		LockAcquired: true,
 		UnlockFn: func() error {
-			_, err := p.Locker.Unlock(lockAttempt.LockKey)
+			// TODO(Ghais):
+			//  1. based on a feature flag, either call this function below or
+			//  omit UnlockFn altogether (caller doesn't lose the lock
+			//  2. If the function returns a non-nil dequeued lock -> comment on the other PR.
+			//  Also see server/events/unlock_command_runner.go:77 (buildCommentOnDequeuedPullRequest)
+			_, _, err := p.Locker.Unlock(lockAttempt.LockKey)
 			return err
 		},
 		LockKey: lockAttempt.LockKey,
 	}, nil
+}
+
+func generateMessageWithQueueStatus(link string, lockAttempt locking.TryLockResponse) string {
+	failureMsg := fmt.Sprintf("This project is currently locked by an unapplied plan from pull %s.", link)
+	switch lockAttempt.EnqueueStatus.Status {
+	case models.Enqueued:
+		failureMsg = fmt.Sprintf("%s This PR entered the waiting queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.QueueDepth)
+	case models.AlreadyInTheQueue:
+		failureMsg = fmt.Sprintf("%s This PR is already in the queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.QueueDepth)
+	}
+	return failureMsg
 }
