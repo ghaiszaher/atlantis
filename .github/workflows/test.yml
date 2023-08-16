@@ -34,7 +34,7 @@ jobs:
               - '.github/workflows/test.yml'
   test:
     needs: [changes]
-    if: github.event.pull_request.draft == false && needs.changes.outputs.should-run-tests == true
+    if: github.event.pull_request.draft == false && ${{ needs.changes.outputs.should-run-tests == true }}
     name: runner / gotest
     runs-on: ubuntu-22.04
     container: ghcr.io/runatlantis/testing-env:latest
@@ -46,7 +46,7 @@ jobs:
 
   skip-test:
     needs: [changes]
-    if: github.event.pull_request.draft == false && needs.changes.outputs.should-run-tests == false
+    if: github.event.pull_request.draft == false && ${{ needs.changes.outputs.should-run-tests == false }}
     name: runner / gotest
     runs-on: ubuntu-22.04
     steps:
