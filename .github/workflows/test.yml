@@ -31,7 +31,6 @@ jobs:
             go:
               - '**.go'
               - 'go.*'
-              - '.github/workflows/test.yml'
   test:
     needs: [changes]
     if: ${{ needs.changes.outputs.should-run-tests }}
