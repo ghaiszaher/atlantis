@@ -22,7 +22,6 @@ jobs:
     outputs:
       should-run-tests: ${{ steps.changes.outputs.go == 'true' }}
     if: github.event.pull_request.draft == false
-    name: runner / gotest
     runs-on: ubuntu-22.04
     steps:
       - uses: dorny/paths-filter@v2
