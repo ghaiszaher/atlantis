@@ -33,7 +33,7 @@ jobs:
               - 'go.*'
   test:
     needs: [changes]
-    if: ${{ needs.changes.outputs.should-run-tests }}
+    if: needs.changes.outputs.should-run-tests == 'true'
     name: runner / gotest
     runs-on: ubuntu-22.04
     container: ghcr.io/runatlantis/testing-env:latest
@@ -45,7 +45,7 @@ jobs:
 
   skip-test:
     needs: [changes]
-    if: ${{ !needs.changes.outputs.should-run-tests }}
+    if: needs.changes.outputs.should-run-tests == 'false'
     name: runner / gotest
     runs-on: ubuntu-22.04
     steps:
