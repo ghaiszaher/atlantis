@@ -31,6 +31,7 @@ jobs:
             go:
               - '**.go'
               - 'go.*'
+              - '.github/workflows/test.yml'
   test:
     needs: [changes]
     if: needs.changes.outputs.should-run-tests == 'true'
@@ -38,7 +39,6 @@ jobs:
     runs-on: ubuntu-22.04
     container: ghcr.io/runatlantis/testing-env:latest
     steps:
-      - run: echo ${{ needs.changes.outputs.should-run-tests }}
       - uses: actions/checkout@v3
       - run: make test-all
       - run: make check-fmt
@@ -49,5 +49,4 @@ jobs:
     name: runner / gotest
     runs-on: ubuntu-22.04
     steps:
-      - run: echo ${{ needs.changes.outputs.should-run-tests }}
       - run: 'echo "No build required"'
