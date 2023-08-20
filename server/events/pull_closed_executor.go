@@ -140,7 +140,7 @@ func (p *PullClosedExecutor) CleanUpPull(repo models.Repo, pull models.PullReque
 func (p *PullClosedExecutor) commentOnDequeuedPullRequests(dequeueStatus models.DequeueStatus) error {
 	locksByPullRequest := groupByPullRequests(dequeueStatus.ProjectLocks)
 	for pullRequestNumber, projectLocks := range locksByPullRequest {
-		planVcsMessage := buildCommentOnDequeuedPullRequest(projectLocks)
+		planVcsMessage := models.BuildCommentOnDequeuedPullRequest(projectLocks)
 		if err := p.VCSClient.CreateComment(projectLocks[0].Pull.BaseRepo, pullRequestNumber, planVcsMessage, ""); err != nil {
 			return errors.Wrapf(err, "unable to comment on PR %d", pullRequestNumber)
 		}
