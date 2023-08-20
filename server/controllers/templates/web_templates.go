@@ -391,7 +391,11 @@ v{{ .AtlantisVersion }}
         url: '{{ .CleanedBasePath }}/locks?id='+lockId,
         type: 'DELETE',
         success: function(result) {
+          {{ if eq (len .Queue) 0 }}
           window.location.replace("{{ .CleanedBasePath }}/?discard=true");
+          {{ else }}
+          window.location.reload();
+          {{ end }}
         }
     });
   });
