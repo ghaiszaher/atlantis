@@ -94,7 +94,7 @@ func (p *DefaultProjectLocker) TryLock(log logging.SimpleLogging, pull models.Pu
 		UnlockFn: func() error {
 			// TODO(Ghais):
 			//  1. based on a feature flag, either call this function below or
-			//  omit UnlockFn altogether (caller doesn't lose the lock
+			//  omit UnlockFn altogether (caller doesn't lose the lock)
 			//  2. If the function returns a non-nil dequeued lock -> comment on the other PR.
 			//  Also see server/events/unlock_command_runner.go:77 (buildCommentOnDequeuedPullRequest)
 			_, _, err := p.Locker.Unlock(lockAttempt.LockKey)
