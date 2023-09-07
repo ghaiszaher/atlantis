@@ -2,11 +2,9 @@ package controllers
 
 import (
 	"fmt"
+	"github.com/runatlantis/atlantis/server/controllers/templates"
 	"net/http"
 	"net/url"
-	"strings"
-
-	"github.com/runatlantis/atlantis/server/controllers/templates"
 
 	"github.com/gorilla/mux"
 	"github.com/runatlantis/atlantis/server/core/locking"
@@ -162,24 +160,10 @@ func (l *LocksController) respond(w http.ResponseWriter, lvl logging.LogLevel, r
 }
 
 func (l *LocksController) commentOnDequeuedPullRequests(dequeuedLock models.ProjectLock) {
-	planVcsMessage := buildCommentOnDequeuedPullRequest([]models.ProjectLock{dequeuedLock})
+	planVcsMessage := models.BuildCommentOnDequeuedPullRequest([]models.ProjectLock{dequeuedLock})
 	if commentErr := l.VCSClient.CreateComment(dequeuedLock.Pull.BaseRepo, dequeuedLock.Pull.Num, planVcsMessage, ""); commentErr != nil {
 		l.Logger.Err("unable to comment on PR %d: %s", dequeuedLock.Pull.Num, commentErr)
 	}
-}
-
-func buildCommentOnDequeuedPullRequest(projectLocks []models.ProjectLock) string {
-	var releasedLocksMessages []string
-	for _, lock := range projectLocks {
-		releasedLocksMessages = append(releasedLocksMessages, fmt.Sprintf("* dir: `%s` workspace: `%s`", lock.Project.Path, lock.Workspace))
-	}
-
-	// stick to the first User for now, if needed, create a list of unique users and mention them all
-	lockCreatorMention := "@" + projectLocks[0].User.Username
-	releasedLocksMessage := strings.Join(releasedLocksMessages, "\n")
-
-	return fmt.Sprintf("%s\nThe following locks have been aquired by this PR and can now be planned:\n%s",
-		lockCreatorMention, releasedLocksMessage)
 }
 
 func GetQueueItemIndexData(q models.ProjectLockQueue) []templates.QueueItemIndexData {

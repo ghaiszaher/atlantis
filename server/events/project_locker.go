@@ -92,12 +92,13 @@ func (p *DefaultProjectLocker) TryLock(log logging.SimpleLogging, pull models.Pu
 	return &TryLockResponse{
 		LockAcquired: true,
 		UnlockFn: func() error {
-			// TODO(Ghais):
-			//  1. based on a feature flag, either call this function below or
-			//  omit UnlockFn altogether (caller doesn't lose the lock
-			//  2. If the function returns a non-nil dequeued lock -> comment on the other PR.
-			//  Also see server/events/unlock_command_runner.go:77 (buildCommentOnDequeuedPullRequest)
-			_, _, err := p.Locker.Unlock(lockAttempt.LockKey)
+			// TODO(Ghais): based on a feature flag, either call this function below or
+			//  omit UnlockFn altogether (caller doesn't lose the lock)
+			_, dequeuedLock, err := p.Locker.Unlock(lockAttempt.LockKey)
+			if dequeuedLock != nil {
+				// TODO(Ghais): add test
+				return p.commentOnDequeuedPullRequest(log, *dequeuedLock)
+			}
 			return err
 		},
 		LockKey: lockAttempt.LockKey,
@@ -113,4 +114,13 @@ func generateMessageWithQueueStatus(link string, lockAttempt locking.TryLockResp
 		failureMsg = fmt.Sprintf("%s This PR is already in the queue :clock130:, number of PRs ahead of you: **%d**.", failureMsg, lockAttempt.EnqueueStatus.QueueDepth)
 	}
 	return failureMsg
+}
+
+func (p *DefaultProjectLocker) commentOnDequeuedPullRequest(log logging.SimpleLogging, dequeuedLock models.ProjectLock) error {
+	planVcsMessage := models.BuildCommentOnDequeuedPullRequest([]models.ProjectLock{dequeuedLock})
+	if commentErr := p.VCSClient.CreateComment(dequeuedLock.Pull.BaseRepo, dequeuedLock.Pull.Num, planVcsMessage, ""); commentErr != nil {
+		log.Err("unable to comment on PR %d: %s", dequeuedLock.Pull.Num, commentErr)
+		return commentErr
+	}
+	return nil
 }

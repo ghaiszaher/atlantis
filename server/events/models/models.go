@@ -704,3 +704,18 @@ type DequeueStatus struct {
 	// the PR's lock that should be planned next
 	ProjectLocks []ProjectLock
 }
+
+// TODO(Ghais): test
+func BuildCommentOnDequeuedPullRequest(projectLocks []ProjectLock) string {
+	var releasedLocksMessages []string
+	for _, lock := range projectLocks {
+		releasedLocksMessages = append(releasedLocksMessages, fmt.Sprintf("* dir: `%s` workspace: `%s`", lock.Project.Path, lock.Workspace))
+	}
+
+	// stick to the first User for now, if needed, create a list of unique users and mention them all
+	lockCreatorMention := "@" + projectLocks[0].User.Username
+	releasedLocksMessage := strings.Join(releasedLocksMessages, "\n")
+
+	return fmt.Sprintf("%s\nThe following locks have been aquired by this PR and can now be planned:\n%s",
+		lockCreatorMention, releasedLocksMessage)
+}
