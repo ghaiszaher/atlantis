@@ -63,5 +63,6 @@ func main() {
 	cmd.RootCmd.AddCommand(server.Init())
 	cmd.RootCmd.AddCommand(version.Init())
 	cmd.RootCmd.AddCommand(testdrive.Init())
+
 	cmd.Execute()
 }
